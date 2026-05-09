@@ -6,7 +6,7 @@ const Value = @import("game").Value;
 const Player = @import("game").Player;
 const heapAdd = @import("heap").heapAdd;
 
-const Board = @This();
+pub const Board = @This();
 const win_stones = if (game == .Gomoku) 5 else 6;
 const Stone = enum(u8) { none, black, white = win_stones };
 const n_places = board_size * board_size;
@@ -29,7 +29,7 @@ pub const Place = struct {
     }
 };
 
-const PlaceValue = struct {
+pub const PlaceValue = struct {
     place: Place,
     value: Value,
 };
@@ -79,21 +79,4 @@ test "max value" {
     const board = Board{};
     const expected = if (game == .Gomoku) 20 else 24;
     try std.testing.expectEqual(expected, board.maxValue(.first));
-}
-
-const benchmark = @import("benchmark");
-
-fn benchmarkMaxValue() void {
-    const board = Board{};
-    for (0..1_000_000) |_| {
-        const firstMax = board.maxValue(.first);
-        const secondMax = board.maxValue(.second);
-        std.mem.doNotOptimizeAway(firstMax);
-        std.mem.doNotOptimizeAway(secondMax);
-    }
-}
-
-pub fn main(init: std.process.Init) void {
-    const time = benchmark.benchmark(init.io, benchmarkMaxValue);
-    std.debug.print("maxValue: {} sec/1M\n", .{time});
 }

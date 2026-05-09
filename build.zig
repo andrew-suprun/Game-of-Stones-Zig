@@ -21,19 +21,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const benchmark = b.addModule("benchmark", .{
-        .root_source_file = b.path("src/benchmark/benchmark.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
     const board = b.addModule("board", .{
         .root_source_file = b.path("src/board/Board.zig"),
         .target = target,
         .optimize = optimize,
     });
     board.addImport("game", game);
-    board.addImport("benchmark", benchmark);
 
     const sim = b.addModule("board", .{
         .root_source_file = b.path("apps/sim/sim.zig"),
@@ -41,17 +34,6 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     sim.addImport("board", board);
-
-    // Benchmark: board
-    const bench_board = b.addExecutable(.{
-        .name = "bench_board",
-        .root_module = board,
-    });
-    bench_board.root_module.addOptions("config", options);
-    b.installArtifact(bench_board);
-    const bench_board_cmd_step = b.step("bench-board", "Run board benchmark");
-    const bench_board_cmd = b.addRunArtifact(bench_board);
-    bench_board_cmd_step.dependOn(&bench_board_cmd.step);
 
     // Executable: sim
     const exe_sim = b.addExecutable(.{
@@ -73,4 +55,22 @@ pub fn build(b: *std.Build) void {
     const run_board_tests = b.addRunArtifact(board_tests);
     const test_step = b.step("test-board", "Run Board tests");
     test_step.dependOn(&run_board_tests.step);
+
+    // Benchmarks:
+    const benchmark = b.addModule("benchmark", .{
+        .root_source_file = b.path("src/benchmark/benchmark.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    benchmark.addImport("board", board);
+
+    const benchmark_exe = b.addExecutable(.{
+        .name = "benchmark",
+        .root_module = benchmark,
+    });
+    benchmark_exe.root_module.addOptions("config", options);
+    b.installArtifact(benchmark_exe);
+    const bench_board_cmd_step = b.step("benchmarks", "Run benchmarks");
+    const bench_board_cmd = b.addRunArtifact(benchmark_exe);
+    bench_board_cmd_step.dependOn(&bench_board_cmd.step);
 }

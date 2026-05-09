@@ -13,3 +13,20 @@ pub fn benchmark(io: Io, comptime func: fn () void) f64 {
     }
     return @as(f64, @floatFromInt(minDur)) / std.time.ns_per_s;
 }
+
+const Board = @import("board").Board;
+
+fn benchmarkMaxValue() void {
+    const board = Board{};
+    for (0..1_000_000) |_| {
+        const firstMax = board.maxValue(.first);
+        const secondMax = board.maxValue(.second);
+        std.mem.doNotOptimizeAway(firstMax);
+        std.mem.doNotOptimizeAway(secondMax);
+    }
+}
+
+pub fn main(init: std.process.Init) void {
+    const time = benchmark(init.io, benchmarkMaxValue);
+    std.debug.print("maxValue: {} sec/1M\n", .{time});
+}
