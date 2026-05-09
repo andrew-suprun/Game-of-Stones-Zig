@@ -15,7 +15,7 @@ pub fn benchmark(io: Io, comptime func: fn () void) f64 {
     return @as(f64, @floatFromInt(minDur)) / std.time.ns_per_s;
 }
 
-const board_size = @import("config").options.board_size;
+const board_size = @import("base").options.board_size;
 const Board = @import("board").Board;
 
 fn boardMaxValue() void {

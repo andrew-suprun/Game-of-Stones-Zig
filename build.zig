@@ -15,33 +15,26 @@ pub fn build(b: *std.Build) void {
     options.addOption(Tree, "tree", option_tree);
     options.addOption(usize, "board_size", option_board_size);
 
-    const config = b.addModule("config", .{
-        .root_source_file = b.path("src/config/config.zig"),
+    const base = b.addModule("base", .{
+        .root_source_file = b.path("src/base/base.zig"),
         .target = target,
         .optimize = optimize,
     });
-    config.addOptions("options", options);
-
-    const game = b.addModule("game", .{
-        .root_source_file = b.path("src/game/game.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
+    base.addOptions("options", options);
 
     const board = b.addModule("board", .{
         .root_source_file = b.path("src/board/Board.zig"),
         .target = target,
         .optimize = optimize,
     });
-    board.addImport("config", config);
-    board.addImport("game", game);
+    board.addImport("base", base);
 
     const sim = b.addModule("board", .{
         .root_source_file = b.path("apps/sim/sim.zig"),
         .target = target,
         .optimize = optimize,
     });
-    sim.addImport("config", config);
+    sim.addImport("base", base);
     sim.addImport("board", board);
 
     // Executable: sim
@@ -70,7 +63,7 @@ pub fn build(b: *std.Build) void {
         .optimize = .ReleaseFast,
         // .optimize = optimize,
     });
-    benchmarks.addImport("config", config);
+    benchmarks.addImport("base", base);
     benchmarks.addImport("board", board);
 
     const benchmarks_exe = b.addExecutable(.{

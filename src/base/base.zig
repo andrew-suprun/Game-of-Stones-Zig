@@ -1,8 +1,13 @@
-const Writer = @import("std").Io.Writer;
+const options = @import("options");
+pub const game = options.game;
+pub const tree = options.tree;
+pub const board_size = options.board_size;
 
 pub const Player = enum { first, second };
 
 pub const Value = i16;
+
+const Writer = @import("std").Io.Writer;
 
 pub const Score = union(enum) {
     value: Value,

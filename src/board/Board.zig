@@ -1,9 +1,10 @@
 const std = @import("std");
 
-const board_size = @import("config").board_size;
-const game = @import("config").game;
-const Value = @import("game").Value;
-const Player = @import("game").Player;
+const base = @import("base");
+const board_size = base.board_size;
+const game = base.game;
+const Value = base.Value;
+const Player = base.Player;
 const heapAdd = @import("heap").heapAdd;
 
 pub const Board = @This();
