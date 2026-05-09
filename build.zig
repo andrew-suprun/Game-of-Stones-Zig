@@ -15,6 +15,13 @@ pub fn build(b: *std.Build) void {
     options.addOption(Tree, "tree", option_tree);
     options.addOption(usize, "board_size", option_board_size);
 
+    const config = b.addModule("config", .{
+        .root_source_file = b.path("src/config/config.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    config.addOptions("options", options);
+
     const game = b.addModule("game", .{
         .root_source_file = b.path("src/game/game.zig"),
         .target = target,
@@ -26,6 +33,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    board.addImport("config", config);
     board.addImport("game", game);
 
     const sim = b.addModule("board", .{
@@ -33,6 +41,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    sim.addImport("config", config);
     sim.addImport("board", board);
 
     // Executable: sim
@@ -40,7 +49,6 @@ pub fn build(b: *std.Build) void {
         .name = "sim",
         .root_module = sim,
     });
-    exe_sim.root_module.addOptions("config", options);
     b.installArtifact(exe_sim);
     const run_sim_step = b.step("run-sim", "Run the simulation");
     const run_sim_cmd = b.addRunArtifact(exe_sim);
@@ -51,7 +59,6 @@ pub fn build(b: *std.Build) void {
     const board_tests = b.addTest(.{
         .root_module = board,
     });
-    board_tests.root_module.addOptions("config", options);
     const run_board_tests = b.addRunArtifact(board_tests);
     const test_step = b.step("test-board", "Run Board tests");
     test_step.dependOn(&run_board_tests.step);
@@ -60,15 +67,16 @@ pub fn build(b: *std.Build) void {
     const benchmarks = b.addModule("benchmarks", .{
         .root_source_file = b.path("apps/benchmarks/benchmarks.zig"),
         .target = target,
-        .optimize = optimize,
+        .optimize = .ReleaseFast,
+        // .optimize = optimize,
     });
+    benchmarks.addImport("config", config);
     benchmarks.addImport("board", board);
 
     const benchmarks_exe = b.addExecutable(.{
         .name = "benchmarks",
         .root_module = benchmarks,
     });
-    benchmarks_exe.root_module.addOptions("config", options);
     b.installArtifact(benchmarks_exe);
     const bench_board_cmd_step = b.step("benchmarks", "Run benchmarks");
     const bench_board_cmd = b.addRunArtifact(benchmarks_exe);
