@@ -61,8 +61,9 @@ values: [2][n_places]Value = values_blk: {
     break :values_blk values;
 },
 
-fn max(v: @Vector(n_places, Value)) Value {
-    return @reduce(.Max, v);
+pub fn maxValue(self: Board, player: Player) Value {
+    const values: @Vector(n_places, Value) = self.values[@intFromEnum(player)];
+    return @reduce(.Max, values);
 }
 
 test "parsePlace" {
@@ -77,5 +78,22 @@ test "parsePlace" {
 test "max value" {
     const board = Board{};
     const expected = if (game == .Gomoku) 20 else 24;
-    try std.testing.expectEqual(expected, max(board.values[0]));
+    try std.testing.expectEqual(expected, board.maxValue(.first));
+}
+
+const benchmark = @import("benchmark");
+
+fn benchmarkMaxValue() void {
+    const board = Board{};
+    for (0..1_000_000) |_| {
+        const firstMax = board.maxValue(.first);
+        const secondMax = board.maxValue(.second);
+        std.mem.doNotOptimizeAway(firstMax);
+        std.mem.doNotOptimizeAway(secondMax);
+    }
+}
+
+pub fn main(init: std.process.Init) void {
+    const time = benchmark.benchmark(init.io, benchmarkMaxValue);
+    std.debug.print("maxValue: {} sec/1M\n", .{time});
 }

@@ -21,12 +21,19 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const benchmark = b.addModule("benchmark", .{
+        .root_source_file = b.path("src/benchmark/benchmark.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     const board = b.addModule("board", .{
         .root_source_file = b.path("src/board/Board.zig"),
         .target = target,
         .optimize = optimize,
     });
     board.addImport("game", game);
+    board.addImport("benchmark", benchmark);
 
     const sim = b.addModule("board", .{
         .root_source_file = b.path("apps/sim/sim.zig"),
@@ -34,6 +41,17 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     sim.addImport("board", board);
+
+    // Benchmark: board
+    const bench_board = b.addExecutable(.{
+        .name = "bench_board",
+        .root_module = board,
+    });
+    bench_board.root_module.addOptions("config", options);
+    b.installArtifact(bench_board);
+    const bench_board_cmd_step = b.step("bench-board", "Run board benchmark");
+    const bench_board_cmd = b.addRunArtifact(bench_board);
+    bench_board_cmd_step.dependOn(&bench_board_cmd.step);
 
     // Executable: sim
     const exe_sim = b.addExecutable(.{
