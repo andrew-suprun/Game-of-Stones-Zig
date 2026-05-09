@@ -7,41 +7,52 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const exe = b.addExecutable(.{
-        .name = "Game_of_Stones_Zig",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-
-    const game = b.option(Game, "game", "Name of the game (default: Connect6)") orelse Game.Connect6;
-    const tree = b.option(Tree, "tree", "Search tree (default: Mcts)") orelse Tree.Mcts;
-    const board_size = b.option(usize, "board_size", "Board size (default: 19)") orelse 19;
-
+    const option_game = b.option(Game, "game", "Name of the game (default: Connect6)") orelse Game.Connect6;
+    const option_tree = b.option(Tree, "tree", "Search tree (default: Mcts)") orelse Tree.Mcts;
+    const option_board_size = b.option(usize, "board_size", "Board size (default: 19)") orelse 19;
     const options = b.addOptions();
-    options.addOption(Game, "game", game);
-    options.addOption(Tree, "tree", tree);
-    options.addOption(usize, "board_size", board_size);
+    options.addOption(Game, "game", option_game);
+    options.addOption(Tree, "tree", option_tree);
+    options.addOption(usize, "board_size", option_board_size);
 
-    exe.root_module.addOptions("config", options);
-
-    b.installArtifact(exe);
-
-    const run_step = b.step("run", "Run the app");
-
-    const run_cmd = b.addRunArtifact(exe);
-    run_step.dependOn(&run_cmd.step);
-
-    run_cmd.step.dependOn(b.getInstallStep());
-
-    const exe_tests = b.addTest(.{
-        .root_module = exe.root_module,
+    const game = b.addModule("game", .{
+        .root_source_file = b.path("src/game/game.zig"),
+        .target = target,
+        .optimize = optimize,
     });
 
-    const run_exe_tests = b.addRunArtifact(exe_tests);
+    const board = b.addModule("board", .{
+        .root_source_file = b.path("src/board/Board.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    board.addImport("game", game);
 
-    const test_step = b.step("test", "Run tests");
-    test_step.dependOn(&run_exe_tests.step);
+    const sim = b.addModule("board", .{
+        .root_source_file = b.path("apps/sim/sim.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    sim.addImport("board", board);
+
+    // Executable: sim
+    const exe_sim = b.addExecutable(.{
+        .name = "sim",
+        .root_module = sim,
+    });
+    exe_sim.root_module.addOptions("config", options);
+    b.installArtifact(exe_sim);
+    const run_sim_step = b.step("run-sim", "Run the simulation");
+    const run_sim_cmd = b.addRunArtifact(exe_sim);
+    run_sim_step.dependOn(&run_sim_cmd.step);
+    run_sim_cmd.step.dependOn(b.getInstallStep());
+
+    // Test: board
+    const board_tests = b.addTest(.{
+        .root_module = board,
+    });
+    board_tests.root_module.addOptions("config", options);
+    const run_board_tests = b.addRunArtifact(board_tests);
+    const test_step = b.step("test-board", "Run Board tests");
+    test_step.dependOn(&run_board_tests.step);
 }
