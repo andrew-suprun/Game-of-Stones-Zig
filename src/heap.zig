@@ -1,16 +1,16 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 
-pub fn heapAdd(comptime T: type, heap: *ArrayList(T), item: T, comptime less: fn (T, T) bool) void {
+pub fn heapAdd(item: anytype, heap: *ArrayList(@TypeOf(item)), comptime less: fn (@TypeOf(item), @TypeOf(item)) bool) void {
     if (heap.items.len == heap.capacity) {
         if (!less(heap.items[0], item)) return;
 
         heap.items[0] = item;
-        siftDown(T, heap, less);
+        siftDown(@TypeOf(item), heap, less);
         return;
     }
-    heap.appendBounded(item) catch unreachable;
-    siftUp(T, heap, less);
+    heap.appendAssumeCapacity(item) catch unreachable;
+    siftUp(@TypeOf(item), heap, less);
 }
 
 fn siftUp(comptime T: type, heap: *ArrayList(T), comptime less: fn (T, T) bool) void {
@@ -52,13 +52,13 @@ fn testLess(i: usize, j: usize) bool {
     return i < j;
 }
 
-test "heapAdd" {
+test heapAdd {
     var buf: [20]usize = undefined;
     var heap = ArrayList(usize).initBuffer(&buf);
 
     for (0..100) |i| {
         const v: usize = i * 17 % 100;
-        heapAdd(usize, &heap, v, testLess);
+        heapAdd(v, &heap, testLess);
     }
 
     const items = heap.items;
@@ -76,10 +76,10 @@ const benchmark = @import("benchmark.zig").benchmark;
 fn heapBench() void {
     var buf: [20]usize = undefined;
     var heap = ArrayList(usize).initBuffer(&buf);
-    for (0..100_000) |_| {
+    for (0..1_000_000) |_| {
         heap.clearRetainingCapacity();
         for (0..100) |i| {
-            heapAdd(usize, &heap, i * 17 % 100, testLess);
+            heapAdd(i * 17 % 100, &heap, testLess);
         }
         std.mem.doNotOptimizeAway(heap);
     }
