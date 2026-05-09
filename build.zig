@@ -57,20 +57,20 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_board_tests.step);
 
     // Benchmarks:
-    const benchmark = b.addModule("benchmark", .{
-        .root_source_file = b.path("src/benchmark/benchmark.zig"),
+    const benchmarks = b.addModule("benchmarks", .{
+        .root_source_file = b.path("apps/benchmarks/benchmarks.zig"),
         .target = target,
         .optimize = optimize,
     });
-    benchmark.addImport("board", board);
+    benchmarks.addImport("board", board);
 
-    const benchmark_exe = b.addExecutable(.{
-        .name = "benchmark",
-        .root_module = benchmark,
+    const benchmarks_exe = b.addExecutable(.{
+        .name = "benchmarks",
+        .root_module = benchmarks,
     });
-    benchmark_exe.root_module.addOptions("config", options);
-    b.installArtifact(benchmark_exe);
+    benchmarks_exe.root_module.addOptions("config", options);
+    b.installArtifact(benchmarks_exe);
     const bench_board_cmd_step = b.step("benchmarks", "Run benchmarks");
-    const bench_board_cmd = b.addRunArtifact(benchmark_exe);
+    const bench_board_cmd = b.addRunArtifact(benchmarks_exe);
     bench_board_cmd_step.dependOn(&bench_board_cmd.step);
 }
