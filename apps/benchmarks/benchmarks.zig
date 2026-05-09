@@ -25,7 +25,16 @@ fn boardMaxValue() void {
     }
 }
 
+fn boardClone() void {
+    var board = Board{};
+    for (0..10_000_000) |_| {
+        std.mem.doNotOptimizeAway(board.clone());
+    }
+}
+
 pub fn main(init: std.process.Init) void {
     const io = init.io;
-    print("maxValue: {} sec/1B\n", .{benchmark(io, boardMaxValue)});
+    print("--- Board ---\n", .{});
+    print("maxValue: {:.3} sec/1B\n", .{benchmark(io, boardMaxValue)});
+    print("clone:    {:.3} sec/10M\n", .{benchmark(io, boardClone)});
 }

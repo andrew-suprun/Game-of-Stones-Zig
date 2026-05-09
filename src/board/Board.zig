@@ -62,6 +62,13 @@ values: [2][n_places]Value = values_blk: {
     break :values_blk values;
 },
 
+pub fn clone(self: Board) Board {
+    var result = Board{ .value = self.value };
+    @memcpy(&result.places, &self.places);
+    @memcpy(&result.values, &self.values);
+    return result;
+}
+
 pub fn maxValue(self: Board, player: Player) Value {
     const values: @Vector(n_places, Value) = self.values[@intFromEnum(player)];
     return @reduce(.Max, values);
