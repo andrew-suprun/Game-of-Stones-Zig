@@ -12,6 +12,7 @@ const win_stones = if (game == .Gomoku) 5 else 6;
 const Stone = enum(u8) { none, black, white = win_stones };
 const n_places = board_size * board_size;
 const value_table_size = win_stones * win_stones + 1;
+const max_places = 32;
 const win = 5000;
 const inf = 8000;
 const score_table = Board.scoreTable();
@@ -66,6 +67,19 @@ values: [2][n_places]Value = values_blk: {
     }
     break :values_blk values;
 },
+
+pub fn topPlaces(self: *Board, comptime turn: Player, places: usize) []PlaceValue {
+    var buf: [max_places]PlaceValue = undefined;
+    var heap: std.ArrayList(PlaceValue) = .initBuffer(buf[0..places]);
+    for (0..n_places) |offset| {
+        const value = self.values[@intFromEnum(turn)][offset];
+        if (self.places[offset] == .none and value > 0) {
+            const place_value = PlaceValue{ .place = Place{ .offset = offset }, .value = value };
+            heapAdd(place_value, &heap, less);
+        }
+    }
+    return heap.items;
+}
 
 pub fn placeStone(self: *Board, place: Place, turn: Player) void {
     const scores = Board.value_table[@intFromEnum(turn)];
@@ -317,6 +331,22 @@ test boardValue {
     const value = board.values[0][9 * board_size + 9];
     board.placeStone(try .init("j10"), .first);
     try std.testing.expectEqual(value, board.boardValue());
+}
+
+test topPlaces {
+    var board = Board{};
+    board.placeStone(try Place.init("j10"), .first);
+    board.placeStone(try Place.init("i10"), .second);
+    board.placeStone(try Place.init("j9"), .second);
+    const places = board.topPlaces(.first, 20);
+    for (places) |place| {
+        std.debug.print("place {} {}\n", .{ place.place, place.value });
+        // try std.testing.expect(place.value >= 36);
+    }
+    const places2 = board.topPlaces(.second, 20);
+    for (places2) |place| {
+        try std.testing.expect(place.value >= 51);
+    }
 }
 
 // test {

@@ -1,7 +1,6 @@
 const std = @import("std");
-const ArrayList = std.ArrayList;
 
-pub fn heapAdd(item: anytype, heap: *ArrayList(@TypeOf(item)), comptime less: fn (@TypeOf(item), @TypeOf(item)) bool) void {
+pub fn heapAdd(item: anytype, heap: *std.ArrayList(@TypeOf(item)), comptime less: fn (@TypeOf(item), @TypeOf(item)) bool) void {
     if (heap.items.len == heap.capacity) {
         if (!less(heap.items[0], item)) return;
 
@@ -9,11 +8,11 @@ pub fn heapAdd(item: anytype, heap: *ArrayList(@TypeOf(item)), comptime less: fn
         siftDown(@TypeOf(item), heap, less);
         return;
     }
-    heap.appendAssumeCapacity(item) catch unreachable;
+    heap.appendAssumeCapacity(item);
     siftUp(@TypeOf(item), heap, less);
 }
 
-fn siftUp(comptime T: type, heap: *ArrayList(T), comptime less: fn (T, T) bool) void {
+fn siftUp(comptime T: type, heap: *std.ArrayList(T), comptime less: fn (T, T) bool) void {
     var child_idx = heap.items.len - 1;
     const child = heap.items[child_idx];
     while (child_idx > 0 and less(child, heap.items[(child_idx - 1) / 2])) {
@@ -24,7 +23,7 @@ fn siftUp(comptime T: type, heap: *ArrayList(T), comptime less: fn (T, T) bool) 
     heap.items[child_idx] = child;
 }
 
-fn siftDown(comptime T: type, heap: *ArrayList(T), comptime less: fn (T, T) bool) void {
+fn siftDown(comptime T: type, heap: *std.ArrayList(T), comptime less: fn (T, T) bool) void {
     var idx: usize = 0;
     const elem = heap.items[idx];
     while (true) {
@@ -54,7 +53,7 @@ fn testLess(i: usize, j: usize) bool {
 
 test heapAdd {
     var buf: [20]usize = undefined;
-    var heap = ArrayList(usize).initBuffer(&buf);
+    var heap = std.ArrayList(usize).initBuffer(&buf);
 
     for (0..100) |i| {
         const v: usize = i * 17 % 100;
@@ -68,23 +67,4 @@ test heapAdd {
         std.debug.print("t: i: {} p: {}, c: {}\n", .{ i, parent, child });
         try std.testing.expect(parent < child);
     }
-}
-
-// Benchmark
-const benchmark = @import("benchmark.zig").benchmark;
-
-fn heapBench() void {
-    var buf: [20]usize = undefined;
-    var heap = ArrayList(usize).initBuffer(&buf);
-    for (0..1_000_000) |_| {
-        heap.clearRetainingCapacity();
-        for (0..100) |i| {
-            heapAdd(i * 17 % 100, &heap, testLess);
-        }
-        std.mem.doNotOptimizeAway(heap);
-    }
-}
-
-pub fn main(init: std.process.Init) !void {
-    std.debug.print("heapAdd: {d:.5} sec\n", .{benchmark(init.io, heapBench)});
 }

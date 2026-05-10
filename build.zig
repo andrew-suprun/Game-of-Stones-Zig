@@ -22,12 +22,19 @@ pub fn build(b: *std.Build) void {
     });
     base.addOptions("options", options);
 
+    const heap = b.addModule("heap", .{
+        .root_source_file = b.path("src/heap/heap.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     const board = b.addModule("board", .{
         .root_source_file = b.path("src/board/Board.zig"),
         .target = target,
         .optimize = optimize,
     });
     board.addImport("base", base);
+    board.addImport("heap", heap);
 
     const sim = b.addModule("board", .{
         .root_source_file = b.path("apps/sim/sim.zig"),
