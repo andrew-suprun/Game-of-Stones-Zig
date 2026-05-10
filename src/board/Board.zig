@@ -11,7 +11,7 @@ pub const Board = @This();
 const win_stones = if (game == .Gomoku) 5 else 6;
 const Stone = enum(u8) { none, black, white = win_stones };
 const n_places = board_size * board_size;
-
+const value_table_size = win_stones * win_stones + 1;
 const win = 5000;
 const inf = 8000;
 const score_table = Board.scoreTable();
@@ -67,6 +67,86 @@ values: [2][n_places]Value = values_blk: {
     break :values_blk values;
 },
 
+pub fn placeStone(self: *Board, place: Place, turn: Player) void {
+    const scores = Board.value_table[@intFromEnum(turn)];
+
+    const x = place.offset % board_size;
+    const y = place.offset / board_size;
+
+    if (turn == .first) {
+        self.value += self.values[@intFromEnum(Player.first)][place.offset];
+    } else {
+        self.value -= self.values[@intFromEnum(Player.second)][place.offset];
+    }
+
+    {
+        const x_start = if (x + 1 > win_stones) x + 1 - win_stones else 0;
+        const x_end = @min(x + win_stones, board_size) - win_stones + 1;
+        const n = x_end - x_start;
+        self.updateRow(y * board_size + x_start, 1, n, scores);
+    }
+
+    {
+        const y_start = if (y + 1 > win_stones) y + 1 - win_stones else 0;
+        const y_end = @min(y + win_stones, board_size) - win_stones + 1;
+        const n = y_end - y_start;
+        self.updateRow(y_start * board_size + x, board_size, n, scores);
+    }
+
+    const m = 1 + @min(x, y, board_size - 1 - x, board_size - 1 - y);
+
+    const c1 = board_size + 1 + x;
+    const c2 = win_stones + y;
+    const c3 = board_size + 1 + y;
+    const c4 = win_stones + x;
+    if (c1 >= c2 and c3 >= c4) {
+        const n = @min(win_stones, m, c1 - c2, c3 - c4);
+        const mn = @min(x, y, win_stones - 1);
+        const x_start = x - mn;
+        const y_start = y - mn;
+        self.updateRow(y_start * board_size + x_start, board_size + 1, n, scores);
+    }
+
+    const c5 = win_stones + x + y;
+    const c6 = x + y + 2;
+    if (2 * board_size >= c5 and c6 >= win_stones) {
+        const n = @min(win_stones, m, 2 * board_size - c5, c6 - win_stones);
+        const mn = @min(board_size - 1 - x, y, win_stones - 1);
+        const x_start = x + mn;
+        const y_start = y - mn;
+        self.updateRow(y_start * board_size + x_start, board_size - 1, n, scores);
+    }
+
+    self.places[place.offset] = if (turn == .first) .black else .white;
+}
+
+fn updateRow(self: *Board, start: usize, delta: usize, n: usize, values: [2][value_table_size]Value) void {
+    var offset = start;
+    var stones: usize = 0;
+
+    inline for (0..win_stones - 1) |i| {
+        stones += self.getPlace(offset + i * delta);
+    }
+
+    for (0..n) |_| {
+        stones += self.getPlace(offset + delta * (win_stones - 1));
+        inline for (0..2) |i| {
+            const placeValue = values[i][stones];
+            if (placeValue != 0) {
+                inline for (0..win_stones) |j| {
+                    self.values[i][offset + j * delta] += placeValue;
+                }
+            }
+        }
+        stones -= self.getPlace(offset);
+        offset += delta;
+    }
+}
+
+fn getPlace(self: Board, offset: usize) usize {
+    return @intCast(@intFromEnum(self.places[offset]));
+}
+
 pub fn clone(self: Board) Board {
     var result = Board{ .value = self.value };
     @memcpy(&result.places, &self.places);
@@ -79,6 +159,88 @@ pub fn maxValue(self: Board, player: Player) Value {
     return @reduce(.Max, values);
 }
 
+fn boardValue(self: Board) Value {
+    var value: Value = 0;
+    for (0..board_size) |y| {
+        var stones: usize = 0;
+        for (0..win_stones - 1) |x| {
+            stones += self.getPlace(y * board_size + x);
+        }
+        for (0..board_size - win_stones + 1) |x| {
+            stones += self.getPlace(y * board_size + x + win_stones - 1);
+            value += Board.calcValue(stones);
+            stones -= self.getPlace(y * board_size + x);
+        }
+    }
+
+    for (0..board_size) |x| {
+        var stones: usize = 0;
+        for (0..win_stones - 1) |y| {
+            stones += self.getPlace(y * board_size + x);
+        }
+        for (0..board_size - win_stones + 1) |y| {
+            stones += self.getPlace((y + win_stones - 1) * board_size + x);
+            value += Board.calcValue(stones);
+            stones -= self.getPlace(y * board_size + x);
+        }
+    }
+
+    for (0..board_size - win_stones + 1) |y| {
+        var stones: usize = 0;
+        for (0..win_stones - 1) |x| {
+            stones += self.getPlace((x + y) * board_size + x);
+        }
+        for (0..board_size - win_stones + 1 - y) |x| {
+            stones += self.getPlace((x + y + win_stones - 1) * board_size + x + win_stones - 1);
+            value += Board.calcValue(stones);
+            stones -= self.getPlace((x + y) * board_size + x);
+        }
+    }
+
+    for (1..board_size - win_stones + 1) |x| {
+        var stones: usize = 0;
+        for (0..win_stones - 1) |y| {
+            stones += self.getPlace(y * board_size + x + y);
+        }
+        for (0..board_size - win_stones + 1 - x) |y| {
+            stones += self.getPlace((y + win_stones - 1) * board_size + x + y + win_stones - 1);
+            value += Board.calcValue(stones);
+            stones -= self.getPlace(y * board_size + x + y);
+        }
+    }
+
+    for (0..board_size - win_stones + 1) |y| {
+        var stones: usize = 0;
+        for (0..win_stones - 1) |x| {
+            stones += self.getPlace((x + y) * board_size + board_size - 1 - x);
+        }
+        for (0..board_size - win_stones + 1 - y) |x| {
+            stones += self.getPlace((x + y + win_stones - 1) * board_size + board_size - 1 - x - win_stones + 1);
+            value += Board.calcValue(stones);
+            stones -= self.getPlace((x + y) * board_size + board_size - 1 - x);
+        }
+    }
+
+    for (1..board_size - win_stones + 1) |x| {
+        var stones: usize = 0;
+        for (0..win_stones - 1) |y| {
+            stones += self.getPlace(y * board_size + board_size - 1 - x - y);
+        }
+        for (0..board_size - win_stones + 1 - x) |y| {
+            stones += self.getPlace((y + win_stones - 1) * board_size + board_size - win_stones - x - y);
+            value += Board.calcValue(stones);
+            stones -= self.getPlace(y * board_size + board_size - 1 - x - y);
+        }
+    }
+
+    return value;
+}
+
+fn calcValue(stones: usize) Value {
+    const black = stones % win_stones;
+    const white = stones / win_stones;
+    return if (white == 0) Board.score_table[black] else if (black == 0) -Board.score_table[white] else 0;
+}
 fn scoreTable() [win_stones + 1]Value {
     return score_blk: {
         var list: [win_stones + 1]Value = undefined;
@@ -92,8 +254,8 @@ fn scoreTable() [win_stones + 1]Value {
     };
 }
 
-fn valueTable() [2][2][win_stones * win_stones + 1]Value {
-    const result_size = win_stones * win_stones + 1;
+fn valueTable() [2][2][value_table_size]Value {
+    const result_size = value_table_size;
     const scores = scoreTable();
 
     const v2 = blk: {
@@ -130,6 +292,11 @@ fn valueTable() [2][2][win_stones * win_stones + 1]Value {
     };
 }
 
+test "init Place" {
+    const place: Place = try .init("j10");
+    try std.testing.expectEqual(9 * board_size + 9, place.offset);
+}
+
 test "parsePlace" {
     const place = try Place.init("j10");
     const expected = 9 * (board_size + 1);
@@ -143,6 +310,13 @@ test "max value" {
     const board = Board{};
     const expected = if (game == .Gomoku) 20 else 24;
     try std.testing.expectEqual(expected, board.maxValue(.first));
+}
+
+test boardValue {
+    var board = Board{};
+    const value = board.values[0][9 * board_size + 9];
+    board.placeStone(try .init("j10"), .first);
+    try std.testing.expectEqual(value, board.boardValue());
 }
 
 // test {
