@@ -12,6 +12,11 @@ const win_stones = if (game == .Gomoku) 5 else 6;
 const Stone = enum(u8) { none, black, white = win_stones };
 const n_places = board_size * board_size;
 
+const win = 5000;
+const inf = 8000;
+const score_table = Board.scoreTable();
+const value_table = Board.valueTable();
+
 pub const Place = struct {
     offset: usize,
 
@@ -74,6 +79,57 @@ pub fn maxValue(self: Board, player: Player) Value {
     return @reduce(.Max, values);
 }
 
+fn scoreTable() [win_stones + 1]Value {
+    return score_blk: {
+        var list: [win_stones + 1]Value = undefined;
+        list[0] = 0;
+        list[1] = 1;
+        for (2..win_stones) |i| {
+            list[i] = list[i - 1] * 5;
+        }
+        list[win_stones] = inf;
+        break :score_blk list;
+    };
+}
+
+fn valueTable() [2][2][win_stones * win_stones + 1]Value {
+    const result_size = win_stones * win_stones + 1;
+    const scores = scoreTable();
+
+    const v2 = blk: {
+        var values: [win_stones][2]Value = undefined;
+        values[0][0] = 1;
+        values[0][1] = -1;
+        for (0..win_stones - 1) |i| {
+            values[i + 1][0] = scores[i + 2] - scores[i + 1];
+            values[i + 1][1] = -scores[i + 1];
+        }
+        break :blk values;
+    };
+
+    return blk: {
+        var result: [2][2][result_size]Value = undefined;
+        for (0..2) |i| {
+            for (0..2) |j| {
+                for (0..result_size) |k| {
+                    result[i][j][k] = 0;
+                }
+            }
+        }
+        for (0..win_stones - 1) |i| {
+            result[0][0][i * win_stones] = v2[i][1];
+            result[0][1][i * win_stones] = -v2[i][0];
+            result[0][0][i] = v2[i + 1][0] - v2[i][0];
+            result[0][1][i] = v2[i][1] - v2[i + 1][1];
+            result[1][0][i] = -v2[i][0];
+            result[1][1][i] = v2[i][1];
+            result[1][0][i * win_stones] = v2[i][1] - v2[i + 1][1];
+            result[1][1][i * win_stones] = v2[i + 1][0] - v2[i][0];
+        }
+        break :blk result;
+    };
+}
+
 test "parsePlace" {
     const place = try Place.init("j10");
     const expected = 9 * (board_size + 1);
@@ -88,3 +144,18 @@ test "max value" {
     const expected = if (game == .Gomoku) 20 else 24;
     try std.testing.expectEqual(expected, board.maxValue(.first));
 }
+
+// test {
+//     for (0..2) |i| {
+//         for (0..2) |j| {
+//             for (0..win_stones) |k| {
+//                 for (0..win_stones) |l| {
+//                     std.debug.print("{:5} ", .{value_table[i][j][k * win_stones + l]});
+//                 }
+//                 std.debug.print("\n", .{});
+//             }
+//             std.debug.print("\n", .{});
+//         }
+//         std.debug.print("\n", .{});
+//     }
+// }
