@@ -36,6 +36,7 @@ pub fn build(b: *std.Build) void {
     board.addImport("base", base);
     board.addImport("heap", heap);
 
+    // sim
     const sim = b.addModule("sim", .{
         .root_source_file = b.path("apps/sim/sim.zig"),
         .target = target,
@@ -44,7 +45,6 @@ pub fn build(b: *std.Build) void {
     sim.addImport("base", base);
     sim.addImport("board", board);
 
-    // Executable: sim
     const exe_sim = b.addExecutable(.{
         .name = "sim",
         .root_module = sim,
@@ -53,7 +53,6 @@ pub fn build(b: *std.Build) void {
     const run_sim_step = b.step("run-sim", "Run the simulation");
     const run_sim_cmd = b.addRunArtifact(exe_sim);
     run_sim_step.dependOn(&run_sim_cmd.step);
-    run_sim_cmd.step.dependOn(b.getInstallStep());
 
     // Test: board
     const board_tests = b.addTest(.{

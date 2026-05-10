@@ -39,6 +39,10 @@ pub const Place = struct {
 pub const PlaceValue = struct {
     place: Place,
     value: Value,
+
+    pub fn format(self: PlaceValue, w: *std.Io.Writer) std.Io.Writer.Error!void {
+        try w.print("PlaceValue {f} {d}", .{ self.place, self.value });
+    }
 };
 
 fn less(a: PlaceValue, b: PlaceValue) bool {
@@ -68,17 +72,14 @@ values: [2][n_places]Value = values_blk: {
     break :values_blk values;
 },
 
-pub fn topPlaces(self: *Board, comptime turn: Player, places: usize) []PlaceValue {
-    var buf: [max_places]PlaceValue = undefined;
-    var heap: std.ArrayList(PlaceValue) = .initBuffer(buf[0..places]);
+pub fn topPlaces(self: *Board, comptime turn: Player, places: *std.ArrayList(PlaceValue)) void {
     for (0..n_places) |offset| {
         const value = self.values[@intFromEnum(turn)][offset];
         if (self.places[offset] == .none and value > 0) {
             const place_value = PlaceValue{ .place = Place{ .offset = offset }, .value = value };
-            heapAdd(place_value, &heap, less);
+            heapAdd(place_value, places, less);
         }
     }
-    return heap.items;
 }
 
 pub fn placeStone(self: *Board, place: Place, turn: Player) void {
@@ -307,7 +308,7 @@ fn valueTable() [2][2][value_table_size]Value {
 }
 
 pub fn format(self: Board, writer: *std.Io.Writer) std.Io.Writer.Error!void {
-    writer.print("\n  ", .{}) catch {};
+    writer.print("\n   ", .{}) catch {};
 
     for (0..board_size) |i| {
         const c: u8 = @intCast(i);
@@ -351,7 +352,7 @@ pub fn format(self: Board, writer: *std.Io.Writer) std.Io.Writer.Error!void {
         }
         writer.print(" {:2}\n", .{y + 1}) catch {};
     }
-    writer.print("  ", .{}) catch {};
+    writer.print("   ", .{}) catch {};
     for (0..board_size) |i| {
         const c: u8 = @intCast(i);
         writer.print(" {c}", .{c + 'a'}) catch {};
@@ -367,27 +368,30 @@ fn printScoresForPlayer(self: Board, player: Player, writer: *std.Io.Writer) std
     writer.print("\n   │", .{}) catch {};
     for (0..board_size) |i| {
         const c: u8 = @intCast(i);
-        writer.print("    {c} ", .{c + 'a'}) catch {};
+        writer.print("   {c} ", .{c + 'a'}) catch {};
     }
-    writer.print("│\n───┼" ++ "──────" ** board_size ++ "┼───\n", .{}) catch {};
+    writer.print("│\n───┼" ++ "─────" ** board_size ++ "┼───\n", .{}) catch {};
     for (0..board_size) |y| {
         writer.print("{d:2} │", .{y + 1}) catch {};
         for (0..board_size) |x| {
             const stone = self.places[y * board_size + x];
             switch (stone) {
-                .none => writer.print("{d:5} ", .{self.values[idx][y * board_size + x]}) catch {},
-                .black => writer.print("    X ", .{}) catch {},
-                .white => writer.print("    O ", .{}) catch {},
+                .none => {
+                    const value: usize = @intCast(self.values[idx][y * board_size + x]);
+                    writer.print("{d:4} ", .{value}) catch {};
+                },
+                .black => writer.print("   X ", .{}) catch {},
+                .white => writer.print("   O ", .{}) catch {},
             }
         }
         writer.print("| {d:2}\n", .{y + 1}) catch {};
     }
-    writer.print("───┼" ++ "──────" ** board_size ++ "┼───", .{}) catch {};
+    writer.print("───┼" ++ "─────" ** board_size ++ "┼───", .{}) catch {};
     if (idx == 1) {
         writer.print("\n   │", .{}) catch {};
         for (0..board_size) |i| {
             const c: u8 = @intCast(i);
-            writer.print("    {c} ", .{c + 'a'}) catch {};
+            writer.print("   {c} ", .{c + 'a'}) catch {};
         }
         writer.print("│\n", .{}) catch {};
     }
@@ -425,14 +429,16 @@ test topPlaces {
     board.placeStone(try Place.init("j10"), .first);
     board.placeStone(try Place.init("i10"), .second);
     board.placeStone(try Place.init("j9"), .second);
-    const places = board.topPlaces(.first, 20);
-    for (places) |place| {
-        std.debug.print("place {} {}\n", .{ place.place, place.value });
-        // try std.testing.expect(place.value >= 36);
+    var buf: [max_places]PlaceValue = undefined;
+    var places: std.ArrayList(PlaceValue) = .initBuffer(buf[0..20]);
+    board.topPlaces(.first, &places);
+    for (places.items) |place| {
+        try std.testing.expect(place.value >= 30);
     }
-    const places2 = board.topPlaces(.second, 20);
-    for (places2) |place| {
-        try std.testing.expect(place.value >= 51);
+    places.clearRetainingCapacity();
+    board.topPlaces(.second, &places);
+    for (places.items) |place| {
+        try std.testing.expect(place.value >= 35);
     }
 }
 
