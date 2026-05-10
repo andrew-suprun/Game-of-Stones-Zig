@@ -36,7 +36,7 @@ pub fn build(b: *std.Build) void {
     board.addImport("base", base);
     board.addImport("heap", heap);
 
-    const sim = b.addModule("board", .{
+    const sim = b.addModule("sim", .{
         .root_source_file = b.path("apps/sim/sim.zig"),
         .target = target,
         .optimize = optimize,
@@ -71,6 +71,7 @@ pub fn build(b: *std.Build) void {
         // .optimize = optimize,
     });
     benchmarks.addImport("base", base);
+    benchmarks.addImport("heap", heap);
     benchmarks.addImport("board", board);
 
     const benchmarks_exe = b.addExecutable(.{

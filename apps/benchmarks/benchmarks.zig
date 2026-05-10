@@ -19,7 +19,9 @@ fn testLess(i: usize, j: usize) bool {
     return i < j;
 }
 
-fn heapAdd() void {
+const heapAdd = @import("heap").heapAdd;
+
+fn benchHeapAdd() void {
     var buf: [20]usize = undefined;
     var heap = std.ArrayList(usize).initBuffer(&buf);
     for (0..1_000_000) |_| {
@@ -34,14 +36,14 @@ fn heapAdd() void {
 const board_size = @import("base").options.board_size;
 const Board = @import("board").Board;
 
-fn boardMaxValue() void {
+fn benchBoardMaxValue() void {
     var board = Board{};
     for (0..1_000_000_000) |_| {
         std.mem.doNotOptimizeAway(board.maxValue(.first));
     }
 }
 
-fn boardClone() void {
+fn benchBoardClone() void {
     var board = Board{};
     for (0..10_000_000) |_| {
         std.mem.doNotOptimizeAway(board.clone());
@@ -51,8 +53,8 @@ fn boardClone() void {
 pub fn main(init: std.process.Init) void {
     const io = init.io;
     print("--- heap ---\n", .{});
-    print("heap:     {:.3} sec/1B\n", .{benchmark(io, heapAdd)});
+    print("heap:     {:.3} sec/1B\n", .{benchmark(io, benchHeapAdd)});
     print("--- Board ---\n", .{});
-    print("maxValue: {:.3} sec/1B\n", .{benchmark(io, boardMaxValue)});
-    print("clone:    {:.3} sec/10M\n", .{benchmark(io, boardClone)});
+    print("maxValue: {:.3} sec/1B\n", .{benchmark(io, benchBoardMaxValue)});
+    print("clone:    {:.3} sec/10M\n", .{benchmark(io, benchBoardClone)});
 }

@@ -306,6 +306,93 @@ fn valueTable() [2][2][value_table_size]Value {
     };
 }
 
+pub fn format(self: Board, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+    writer.print("\n  ", .{}) catch {};
+
+    for (0..board_size) |i| {
+        const c: u8 = @intCast(i);
+        writer.print(" {c}", .{c + 'a'}) catch {};
+    }
+    writer.print("\n", .{}) catch {};
+
+    for (0..board_size) |y| {
+        writer.print("{:2} ", .{y + 1}) catch {};
+        for (0..board_size) |x| {
+            const stone = self.places[y * board_size + x];
+            switch (stone) {
+                .black => if (x == 0) writer.print(" X", .{}) catch {} else writer.print("─X", .{}) catch {},
+                .white => if (x == 0) writer.print(" O", .{}) catch {} else writer.print("─O", .{}) catch {},
+                .none => {
+                    switch (y) {
+                        0 => {
+                            switch (x) {
+                                0 => writer.print(" ┌", .{}) catch {},
+                                board_size - 1 => writer.print("─┐", .{}) catch {},
+                                else => writer.print("─┬", .{}) catch {},
+                            }
+                        },
+                        board_size - 1 => {
+                            switch (x) {
+                                0 => writer.print(" └", .{}) catch {},
+                                board_size - 1 => writer.print("─┘", .{}) catch {},
+                                else => writer.print("─┴", .{}) catch {},
+                            }
+                        },
+                        else => {
+                            switch (x) {
+                                0 => writer.print(" ├", .{}) catch {},
+                                board_size - 1 => writer.print("─┤", .{}) catch {},
+                                else => writer.print("─┼", .{}) catch {},
+                            }
+                        },
+                    }
+                },
+            }
+        }
+        writer.print(" {:2}\n", .{y + 1}) catch {};
+    }
+    writer.print("  ", .{}) catch {};
+    for (0..board_size) |i| {
+        const c: u8 = @intCast(i);
+        writer.print(" {c}", .{c + 'a'}) catch {};
+    }
+    writer.print("\n", .{}) catch {};
+
+    try self.printScoresForPlayer(.first, writer);
+    try self.printScoresForPlayer(.second, writer);
+}
+
+fn printScoresForPlayer(self: Board, player: Player, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+    const idx = @intFromEnum(player);
+    writer.print("\n   │", .{}) catch {};
+    for (0..board_size) |i| {
+        const c: u8 = @intCast(i);
+        writer.print("    {c} ", .{c + 'a'}) catch {};
+    }
+    writer.print("│\n───┼" ++ "──────" ** board_size ++ "┼───\n", .{}) catch {};
+    for (0..board_size) |y| {
+        writer.print("{d:2} │", .{y + 1}) catch {};
+        for (0..board_size) |x| {
+            const stone = self.places[y * board_size + x];
+            switch (stone) {
+                .none => writer.print("{d:5} ", .{self.values[idx][y * board_size + x]}) catch {},
+                .black => writer.print("    X ", .{}) catch {},
+                .white => writer.print("    O ", .{}) catch {},
+            }
+        }
+        writer.print("| {d:2}\n", .{y + 1}) catch {};
+    }
+    writer.print("───┼" ++ "──────" ** board_size ++ "┼───", .{}) catch {};
+    if (idx == 1) {
+        writer.print("\n   │", .{}) catch {};
+        for (0..board_size) |i| {
+            const c: u8 = @intCast(i);
+            writer.print("    {c} ", .{c + 'a'}) catch {};
+        }
+        writer.print("│\n", .{}) catch {};
+    }
+}
+
 test "init Place" {
     const place: Place = try .init("j10");
     try std.testing.expectEqual(9 * board_size + 9, place.offset);

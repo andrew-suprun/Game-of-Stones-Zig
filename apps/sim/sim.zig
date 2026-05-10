@@ -10,7 +10,7 @@ pub fn main(_: std.process.Init) !void {
     std.debug.print("board_size: {}\n", .{base.board_size});
 
     const board = Board{};
-    _ = board;
+    std.debug.print("{f}\n", .{board});
 }
 
 test "foo" {
