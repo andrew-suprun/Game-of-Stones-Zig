@@ -67,7 +67,6 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("apps/benchmarks/benchmarks.zig"),
         .target = target,
         .optimize = .ReleaseFast,
-        // .optimize = optimize,
     });
     benchmarks.addImport("base", base);
     benchmarks.addImport("heap", heap);

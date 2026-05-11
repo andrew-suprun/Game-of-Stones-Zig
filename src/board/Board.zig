@@ -83,7 +83,7 @@ pub fn topPlaces(self: *Board, comptime turn: Player, places: *std.ArrayList(Pla
 }
 
 pub fn placeStone(self: *Board, place: Place, turn: Player) void {
-    const scores = Board.value_table[@intFromEnum(turn)];
+    const values = Board.value_table[@intFromEnum(turn)];
 
     const x = place.offset % board_size;
     const y = place.offset / board_size;
@@ -95,47 +95,46 @@ pub fn placeStone(self: *Board, place: Place, turn: Player) void {
     }
 
     {
-        const x_start = if (x + 1 > win_stones) x + 1 - win_stones else 0;
+        const x_start = @max(0, x - win_stones + 1);
         const x_end = @min(x + win_stones, board_size) - win_stones + 1;
         const n = x_end - x_start;
-        self.updateRow(y * board_size + x_start, 1, n, scores);
+        self.updateRow(y * board_size + x_start, 1, n, values);
     }
 
     {
-        const y_start = if (y + 1 > win_stones) y + 1 - win_stones else 0;
+        const y_start = @max(0, y - win_stones + 1);
         const y_end = @min(y + win_stones, board_size) - win_stones + 1;
         const n = y_end - y_start;
-        self.updateRow(y_start * board_size + x, board_size, n, scores);
+        self.updateRow(y_start * board_size + x, board_size, n, values);
     }
 
     const m = 1 + @min(x, y, board_size - 1 - x, board_size - 1 - y);
 
-    const c1 = board_size + 1 + x;
-    const c2 = win_stones + y;
-    const c3 = board_size + 1 + y;
-    const c4 = win_stones + x;
-    if (c1 >= c2 and c3 >= c4) {
-        const n = @min(win_stones, m, c1 - c2, c3 - c4);
-        const mn = @min(x, y, win_stones - 1);
-        const x_start = x - mn;
-        const y_start = y - mn;
-        self.updateRow(y_start * board_size + x_start, board_size + 1, n, scores);
+    {
+        const upper_bound = board_size - win_stones + 1;
+        const n = @min(win_stones, m, upper_bound - y + x, upper_bound - x + y);
+        if (n > 0) {
+            const mn = @min(x, y, win_stones - 1);
+            const x_start = x - mn;
+            const y_start = y - mn;
+            self.updateRow(y_start * board_size + x_start, board_size + 1, n, values);
+        }
     }
 
-    const c5 = win_stones + x + y;
-    const c6 = x + y + 2;
-    if (2 * board_size >= c5 and c6 >= win_stones) {
-        const n = @min(win_stones, m, 2 * board_size - c5, c6 - win_stones);
-        const mn = @min(board_size - 1 - x, y, win_stones - 1);
-        const x_start = x + mn;
-        const y_start = y - mn;
-        self.updateRow(y_start * board_size + x_start, board_size - 1, n, scores);
+    {
+        const n = @min(win_stones, m, 2 * board_size - win_stones - y - x, x + y - win_stones + 2);
+        if (n > 0) {
+            const mn = @min(board_size - 1 - x, y, win_stones - 1);
+            const x_start = x + mn;
+            const y_start = y - mn;
+            self.updateRow(y_start * board_size + x_start, board_size - 1, n, values);
+        }
     }
 
     self.places[place.offset] = if (turn == .first) .black else .white;
 }
 
-fn updateRow(self: *Board, start: usize, delta: usize, n: usize, values: [2][value_table_size]Value) void {
+pub fn updateRow(self: *Board, start: usize, delta: usize, n: usize, values: [2][value_table_size]Value) void {
     var offset = start;
     var stones: usize = 0;
 
@@ -440,6 +439,11 @@ test topPlaces {
     for (places.items) |place| {
         try std.testing.expect(place.value >= 35);
     }
+}
+
+test {
+    var board = Board{};
+    board.updateRow(0, 1, 6, value_table[0]);
 }
 
 // test {
