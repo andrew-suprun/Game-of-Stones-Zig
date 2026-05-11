@@ -145,12 +145,12 @@ fn updateRow(self: *Board, start: usize, delta: usize, n: usize, values: [2][val
 
     for (0..n) |_| {
         stones += self.getPlace(offset + delta * (win_stones - 1));
-        inline for (0..2) |i| {
-            const placeValue = values[i][stones];
-            if (placeValue != 0) {
-                inline for (0..win_stones) |j| {
-                    self.values[i][offset + j * delta] += placeValue;
-                }
+        const placeValue0 = values[0][stones];
+        const placeValue1 = values[1][stones];
+        if (placeValue0 != 0 or placeValue1 != 0) {
+            inline for (0..win_stones) |j| {
+                self.values[0][offset + j * delta] += placeValue0;
+                self.values[1][offset + j * delta] += placeValue1;
             }
         }
         stones -= self.getPlace(offset);
