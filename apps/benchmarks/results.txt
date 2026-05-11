@@ -1,6 +1,8 @@
 --- heap ---
-heap: 0.358 sec/1B
+heap: 0.355 sec/1B
 --- Board ---
-clone:        0.266 sec/10M
-benchRollout: 0.307 sec/100K
-maxValue:     0.310 sec/1B
+clone:      0.365 sec/10M
+updateRow:  0.425 sec/1M
+placeStone: 0.154 sec/100K
+rollout:    0.297 sec/100K
+maxValue:   0.310 sec/1B
