@@ -1,0 +1,7 @@
+--- heap ---
+heap: 0.346 sec/1B
+--- Board ---
+clone:           0.261 sec/10M
+benchPlaceStone: 0.683 sec/10M
+benchTopPlaces:  1.055 sec/1M
+maxValue:        0.310 sec/1B

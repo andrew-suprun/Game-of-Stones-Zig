@@ -24,7 +24,6 @@ pub fn main(init: std.process.Init) void {
     print("heap: {:.3} sec/1B\n", .{benchmark(io, heap.benchHeapAdd)});
     print("--- Board ---\n", .{});
     print("clone:           {:.3} sec/10M\n", .{benchmark(io, board.benchBoardClone)});
-    print("benchTopPlaces:  {:.3} sec/1M\n", .{benchmark(io, board.benchTopPlaces)});
-    print("benchPlaceStone: {:.3} sec/1B\n", .{benchmark(io, board.benchPlaceStone)});
-    print("maxValue:        {:.3} sec/1B\n", .{benchmark(io, board.benchBoardMaxValue)});
+    print("benchRollout: {:.3} sec/100K\n", .{benchmark(io, board.benchRollout)});
+    print("maxValue:     {:.3} sec/1B\n", .{benchmark(io, board.benchBoardMaxValue)});
 }
