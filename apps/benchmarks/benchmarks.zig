@@ -23,7 +23,7 @@ pub fn main(init: std.process.Init) void {
     print("--- heap ---\n", .{});
     print("heap: {:.3} sec/1B\n", .{benchmark(io, heap.benchHeapAdd)});
     print("--- Board ---\n", .{});
-    print("clone:           {:.3} sec/10M\n", .{benchmark(io, board.benchBoardClone)});
+    print("clone:        {:.3} sec/10M\n", .{benchmark(io, board.benchBoardClone)});
     print("benchRollout: {:.3} sec/100K\n", .{benchmark(io, board.benchRollout)});
     print("maxValue:     {:.3} sec/1B\n", .{benchmark(io, board.benchBoardMaxValue)});
 }
