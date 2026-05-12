@@ -7,16 +7,17 @@ const Value = base.Value;
 const Player = base.Player;
 const heapAdd = @import("heap").heapAdd;
 
-pub const Board = @This();
 const win_stones = if (game == .Gomoku) 5 else 6;
 const Stone = enum(u8) { none, black, white = win_stones };
 const n_places = board_size * board_size;
 const value_table_size = win_stones * win_stones + 1;
-const max_places = 32;
-const win = 5000;
-const inf = 8000;
 const score_table = Board.scoreTable();
 const value_table = Board.valueTable();
+
+pub const Board = @This();
+pub const max_places = 32;
+pub const win = 5000;
+pub const inf = 8000;
 
 pub const Place = struct {
     offset: usize,
@@ -109,7 +110,7 @@ pub fn placeStone(self: *Board, place: Place, turn: Player) void {
     }
 
     {
-        const y_start = @max(0, y - win_stones + 1);
+        const y_start = @max(win_stones - 1, y) + 1 - win_stones;
         const y_end = @min(y + win_stones, board_size) - win_stones + 1;
         const n = y_end - y_start;
         self.updateRow(y_start * board_size + x, board_size, n, values);

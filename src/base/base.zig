@@ -30,8 +30,8 @@ pub fn MoveScore(comptime Move: type) type {
         move: Move,
         score: Score,
 
-        pub fn format(self: MoveScore, w: *Writer) Writer.Error!void {
-            w.print("{f} {f}", .{ self.move, self.score });
+        pub fn format(self: @This(), w: *Writer) Writer.Error!void {
+            try w.print("{f} {f}", .{ self.move, self.score });
         }
     };
 }

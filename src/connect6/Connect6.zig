@@ -31,9 +31,9 @@ pub const Move = struct {
     }
 
     pub fn format(self: Move, w: *std.Io.Writer) std.Io.Writer.Error!void {
-        w.print("{}", .{self.place1});
+        try w.print("{f}", .{self.place1});
         if (self.place1.offset != self.place2.offset) {
-            w.print("-{}", .{self.place2});
+            try w.print("-{f}", .{self.place2});
         }
     }
 };
@@ -55,45 +55,42 @@ pub fn playMove(self: *Connect6, move: Move) void {
 }
 
 pub fn topMoves(self: *Connect6, max_places: usize, moves: *std.ArrayList(MoveScore)) void {
-    var place_buf: [max_places]PlaceValue = undefined;
-    var top_places: std.ArrayList(PlaceValue) = .initBuffer(&place_buf);
+    var place_buf: [Board.max_places]PlaceValue = undefined;
+    var top_places: std.ArrayList(PlaceValue) = .initBuffer(place_buf[0..max_places]);
     self.board.topPlaces(self.turn, &top_places);
 
-    std.debug.assert(top_places.len >= 2);
+    std.debug.assert(top_places.items.len >= 2);
 
     const turn_idx: usize = @intCast(@intFromEnum(self.turn));
-    for (0..top_places.len - 1) |i| {
-        const place1 = top_places[i];
-        const value1 = self.board.getScores(place1.place)[turn_idx];
+    for (0..top_places.items.len - 1) |i| {
+        const place1 = top_places.items[i];
+        const value1 = self.board.values[turn_idx][place1.place.offset];
         if (value1 >= Board.win) {
-            moves.clear();
-            moves.append(MoveScore{ .move = Move{ .place1 = place1.place, .place2 = place1.place }, .score = .win });
+            moves.clearRetainingCapacity();
+            moves.appendAssumeCapacity(MoveScore{ .move = Move{ .place1 = place1.place, .place2 = place1.place }, .score = .win });
             return;
         }
 
         self.board.placeStone(place1.place, self.turn);
 
-        for (i + 1..top_places.len) |j| {
-            const place2 = top_places[j];
-            const value2 = self.board.getScores(place2.place)[turn_idx];
+        for (i + 1..top_places.items.len) |j| {
+            const place2 = top_places.items[j];
+            const value2 = self.board.values[turn_idx][place2.place.offset];
 
             if (value2 >= Board.win) {
-                moves.clear();
-                moves.append(MoveScore{ .move = Move{ .place1 = place1.place, .place2 = place2.place }, .score = .win });
+                moves.clearRetainingCapacity();
+                moves.appendAssumeCapacity(MoveScore{ .move = Move{ .place1 = place1.place, .place2 = place2.place }, .score = .win });
                 return;
             } else if (value1 + value2 == 0) {
-                moves.append(MoveScore{ .move = Move{ .place1 = place1.place, .place2 = place2.place }, .score = .draw });
+                moves.appendAssumeCapacity(MoveScore{ .move = Move{ .place1 = place1.place, .place2 = place2.place }, .score = .draw });
             } else {
                 self.board.placeStone(place2.place, self.turn);
                 const opp_value = self.board.maxValue(opponent(self.turn));
                 const move_value = self.board.value + value1 + value2 - opp_value;
-                moves.append(MoveScore{ .move = Move{ .place1 = place1.place, .place2 = place2.place }, .score = .{ .value = move_value } });
+                moves.appendAssumeCapacity(MoveScore{ .move = Move{ .place1 = place1.place, .place2 = place2.place }, .score = .{ .value = move_value } });
             }
         }
-        self.board.removeStone();
     }
-
-    return self.heap.items();
 }
 
 fn opponent(player: Player) Player {
@@ -107,5 +104,14 @@ pub fn format(self: Connect6, w: *std.Io.Writer) std.Io.Writer.Error!void {
 test "topMoves" {
     var c6 = Connect6{};
     c6.playMove(Connect6.Move{ .place1 = try .init("j10"), .place2 = try .init("j10") });
+    c6.playMove(Connect6.Move{ .place1 = try .init("i9"), .place2 = try .init("i10") });
+
+    var move_buf: [20]MoveScore = undefined;
     std.debug.print("{f}", .{c6});
+    var top_moves: std.ArrayList(MoveScore) = .initBuffer(&move_buf);
+    c6.topMoves(16, &top_moves);
+    std.debug.print("{}\n", .{top_moves.items.len});
+    for (top_moves.items) |item| {
+        std.debug.print("{f}\n", .{item});
+    }
 }
