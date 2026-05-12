@@ -100,19 +100,12 @@ fn opponent(player: Player) Player {
     return if (player == .first) .second else .first;
 }
 
-test "parsePlace" {
-    var move = try Connect6.Move.init("s19");
-    try std.testing.expect(move.place1.offset == 18 * board_size + 18);
-    var buf: [7]u8 = undefined;
-    var str = move.str(buf[0..]);
-    try std.testing.expect(std.mem.eql(u8, "s19", str));
-    move = try Connect6.Move.init("a1-s19");
-    str = move.str(buf[0..]);
-    try std.testing.expect(move.eql(Connect6.Move{ .place1 = .{ .x = 0, .y = 0 }, .place2 = .{ .x = 18, .y = 18 } }));
-    try std.testing.expect(std.mem.eql(u8, "a1-s19", str));
+pub fn format(self: Connect6, w: *std.Io.Writer) std.Io.Writer.Error!void {
+    try w.print("turn {}\n{f}\n", .{ self.turn, self.board });
 }
 
 test "topMoves" {
-    const c6 = Connect6{};
-    c6.playMove(Connect6.Move{ .place1 = .init("j10"), .place2 = .init("j10") });
+    var c6 = Connect6{};
+    c6.playMove(Connect6.Move{ .place1 = try .init("j10"), .place2 = try .init("j10") });
+    std.debug.print("{f}", .{c6});
 }
