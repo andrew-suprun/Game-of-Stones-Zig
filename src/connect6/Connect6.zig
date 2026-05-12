@@ -22,7 +22,7 @@ pub const Move = struct {
     place1: Place,
     place2: Place,
 
-    pub fn init(place1: Place, place2: Place) Move {
+    fn init(place1: Place, place2: Place) Move {
         if (place1.lt(place2)) {
             return .{ .place1 = place1, .place2 = place2 };
         } else {
@@ -30,7 +30,7 @@ pub const Move = struct {
         }
     }
 
-    pub fn initFromStr(text: []const u8) error{ParseError}!Move {
+    fn initFromStr(text: []const u8) error{ParseError}!Move {
         var it = std.mem.tokenizeScalar(u8, text, '-');
         const token1 = it.next() orelse return error.ParseError;
         const token2 = it.next() orelse token1;

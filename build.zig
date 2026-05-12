@@ -49,6 +49,14 @@ pub fn build(b: *std.Build) void {
     connect6.addImport("board", board);
     connect6.addImport("heap", heap);
 
+    // mcts
+    const mcts = b.addModule("mcts", .{
+        .root_source_file = b.path("src/mcts/mcts.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    mcts.addImport("base", base);
+
     // sim
     const sim = b.addModule("sim", .{
         .root_source_file = b.path("apps/sim/sim.zig"),
@@ -82,6 +90,14 @@ pub fn build(b: *std.Build) void {
     const run_connect6_tests = b.addRunArtifact(connect6_tests);
     const test_connect6_step = b.step("test-connect6", "Run Connect6 tests");
     test_connect6_step.dependOn(&run_connect6_tests.step);
+
+    // Test: mcts
+    const mcts_tests = b.addTest(.{
+        .root_module = mcts,
+    });
+    const run_mcts_tests = b.addRunArtifact(mcts_tests);
+    const test_mcts_step = b.step("test-mcts", "Run Connect6 tests");
+    test_mcts_step.dependOn(&run_mcts_tests.step);
 
     // Benchmarks:
     const benchmarks = b.addModule("benchmarks", .{

@@ -30,6 +30,10 @@ pub const Place = struct {
         return .{ .offset = (y1 - 1) * board_size + x };
     }
 
+    pub fn eq(self: Place, other: Place) bool {
+        return self.offset == other.offset;
+    }
+
     pub fn lt(self: Place, other: Place) bool {
         const self_x = self.offset % board_size;
         const other_x = other.offset % board_size;
@@ -59,7 +63,7 @@ pub const PlaceValue = struct {
     }
 };
 
-fn less(a: PlaceValue, b: PlaceValue) bool {
+fn lt(a: PlaceValue, b: PlaceValue) bool {
     return a.value < b.value;
 }
 
@@ -98,7 +102,7 @@ pub fn topPlaces(self: *Board, turn: Player, places: *std.ArrayList(PlaceValue))
         const value = self.values[@intFromEnum(turn)][offset];
         if (self.places[offset] == .none and value > 0) {
             const place_value = PlaceValue{ .place = Place{ .offset = offset }, .value = value };
-            heapAdd(place_value, places, less);
+            heapAdd(place_value, places, lt);
         }
     }
 }
@@ -271,6 +275,7 @@ fn calcValue(stones: usize) Value {
     const white = stones / win_stones;
     return if (white == 0) Board.score_table[black] else if (black == 0) -Board.score_table[white] else 0;
 }
+
 fn scoreTable() [win_stones + 1]Value {
     return score_blk: {
         var list: [win_stones + 1]Value = undefined;
