@@ -30,6 +30,19 @@ pub const Place = struct {
         return .{ .offset = (y1 - 1) * board_size + x };
     }
 
+    pub fn lt(self: Place, other: Place) bool {
+        const self_x = self.offset % board_size;
+        const other_x = other.offset % board_size;
+        if (self_x < other_x) {
+            return true;
+        } else if (self_x > other_x) {
+            return false;
+        }
+        const self_y = self.offset / board_size;
+        const other_y = other.offset / board_size;
+        return self_y < other_y;
+    }
+
     pub fn format(self: Place, w: *std.Io.Writer) std.Io.Writer.Error!void {
         const x = self.offset % board_size;
         const y = self.offset / board_size + 1;
@@ -42,7 +55,7 @@ pub const PlaceValue = struct {
     value: Value,
 
     pub fn format(self: PlaceValue, w: *std.Io.Writer) std.Io.Writer.Error!void {
-        try w.print("PlaceValue {f} {d}", .{ self.place, self.value });
+        try w.print("{f} {d}", .{ self.place, self.value });
     }
 };
 
@@ -140,6 +153,8 @@ pub fn placeStone(self: *Board, place: Place, turn: Player) void {
     }
 
     self.places[place.offset] = if (turn == .first) .black else .white;
+    self.values[0][place.offset] = -inf;
+    self.values[1][place.offset] = -inf;
 }
 
 pub fn updateRow(self: *Board, start: usize, delta: usize, n: usize, values: [2][value_table_size]Value) void {

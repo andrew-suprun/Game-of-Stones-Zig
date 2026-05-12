@@ -15,6 +15,24 @@ pub const Score = union(enum) {
     loss,
     draw,
 
+    pub fn lt(self: Score, other: Score) bool {
+        return switch (self) {
+            .win => false,
+            .loss => true,
+            .draw => switch (other) {
+                .win => true,
+                .loss, .draw => false,
+                .value => |vy| vy > 0,
+            },
+            .value => |vx| switch (other) {
+                .win => true,
+                .loss => false,
+                .draw => vx < 0,
+                .value => |vy| vx < vy,
+            },
+        };
+    }
+
     pub fn format(self: Score, w: *Writer) Writer.Error!void {
         try switch (self) {
             .value => |v| w.print("{d}", .{v}),

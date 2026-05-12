@@ -13,6 +13,7 @@ const b = @import("board");
 const Board = b.Board;
 const Place = b.Place;
 const PlaceValue = b.PlaceValue;
+const heapAdd = @import("heap").heapAdd;
 
 board: Board = Board{},
 turn: Player = .first,
@@ -21,13 +22,21 @@ pub const Move = struct {
     place1: Place,
     place2: Place,
 
-    pub fn init(text: []const u8) error{ParseError}!Move {
+    pub fn init(place1: Place, place2: Place) Move {
+        if (place1.lt(place2)) {
+            return .{ .place1 = place1, .place2 = place2 };
+        } else {
+            return .{ .place1 = place2, .place2 = place1 };
+        }
+    }
+
+    pub fn initFromStr(text: []const u8) error{ParseError}!Move {
         var it = std.mem.tokenizeScalar(u8, text, '-');
         const token1 = it.next() orelse return error.ParseError;
         const token2 = it.next() orelse token1;
         const place1 = try Place.init(token1);
         const place2 = try Place.init(token2);
-        return .{ .place1 = place1, .place2 = place2 };
+        return .init(place1, place2);
     }
 
     pub fn format(self: Move, w: *std.Io.Writer) std.Io.Writer.Error!void {
@@ -38,8 +47,8 @@ pub const Move = struct {
     }
 };
 
-fn less(x: MoveScore, y: MoveScore) bool {
-    return x.score < y.score;
+fn lt(x: MoveScore, y: MoveScore) bool {
+    return x.score.lt(y.score);
 }
 
 pub fn clone(self: Connect6) Connect6 {
@@ -61,35 +70,43 @@ pub fn topMoves(self: *Connect6, max_places: usize, moves: *std.ArrayList(MoveSc
 
     std.debug.assert(top_places.items.len >= 2);
 
-    const turn_idx: usize = @intCast(@intFromEnum(self.turn));
     for (0..top_places.items.len - 1) |i| {
-        const place1 = top_places.items[i];
-        const value1 = self.board.values[turn_idx][place1.place.offset];
+        const pv = top_places.items[i];
+        const place1 = pv.place;
+        const value1 = pv.value;
         if (value1 >= Board.win) {
             moves.clearRetainingCapacity();
-            moves.appendAssumeCapacity(MoveScore{ .move = Move{ .place1 = place1.place, .place2 = place1.place }, .score = .win });
+            moves.appendAssumeCapacity(MoveScore{ .move = .init(place1, place1), .score = .win });
             return;
         }
 
-        self.board.placeStone(place1.place, self.turn);
+        var board1 = self.board.clone();
+        board1.placeStone(place1, self.turn);
 
         for (i + 1..top_places.items.len) |j| {
-            const place2 = top_places.items[j];
-            const value2 = self.board.values[turn_idx][place2.place.offset];
+            const place2 = top_places.items[j].place;
+            const value2 = board1.values[@intFromEnum(self.turn)][place2.offset];
 
             if (value2 >= Board.win) {
                 moves.clearRetainingCapacity();
-                moves.appendAssumeCapacity(MoveScore{ .move = Move{ .place1 = place1.place, .place2 = place2.place }, .score = .win });
+                moves.appendAssumeCapacity(MoveScore{ .move = .init(place1, place2), .score = .win });
                 return;
             } else if (value1 + value2 == 0) {
-                moves.appendAssumeCapacity(MoveScore{ .move = Move{ .place1 = place1.place, .place2 = place2.place }, .score = .draw });
+                moves.appendAssumeCapacity(MoveScore{ .move = .init(place1, place2), .score = .draw });
             } else {
-                self.board.placeStone(place2.place, self.turn);
-                const opp_value = self.board.maxValue(opponent(self.turn));
-                const move_value = self.board.value + value1 + value2 - opp_value;
-                moves.appendAssumeCapacity(MoveScore{ .move = Move{ .place1 = place1.place, .place2 = place2.place }, .score = .{ .value = move_value } });
+                var board2 = board1.clone();
+                board2.placeStone(place2, self.turn);
+                const opp_value = board2.maxValue(opponent(self.turn));
+                if (opp_value < Board.inf) {
+                    const move_value = self.board.value + value1 + value2 - opp_value;
+                    const ms = MoveScore{ .move = .init(place1, place2), .score = .{ .value = move_value } };
+                    heapAdd(ms, moves, lt);
+                }
             }
         }
+    }
+    if (moves.items.len == 0) {
+        moves.appendAssumeCapacity(MoveScore{ .move = .init(top_places.items[0].place, top_places.items[1].place), .score = .loss });
     }
 }
 
@@ -103,15 +120,17 @@ pub fn format(self: Connect6, w: *std.Io.Writer) std.Io.Writer.Error!void {
 
 test "topMoves" {
     var c6 = Connect6{};
-    c6.playMove(Connect6.Move{ .place1 = try .init("j10"), .place2 = try .init("j10") });
-    c6.playMove(Connect6.Move{ .place1 = try .init("i9"), .place2 = try .init("i10") });
+    c6.playMove(try .initFromStr("j10"));
+    c6.playMove(try .initFromStr("i9-i10"));
 
     var move_buf: [20]MoveScore = undefined;
-    std.debug.print("{f}", .{c6});
     var top_moves: std.ArrayList(MoveScore) = .initBuffer(&move_buf);
     c6.topMoves(16, &top_moves);
-    std.debug.print("{}\n", .{top_moves.items.len});
-    for (top_moves.items) |item| {
-        std.debug.print("{f}\n", .{item});
+    var best_move = top_moves.items[0];
+    for (top_moves.items) |move| {
+        if (best_move.score.lt(move.score)) {
+            best_move = move;
+        }
     }
+    try std.testing.expect(best_move.score.value == 19);
 }
