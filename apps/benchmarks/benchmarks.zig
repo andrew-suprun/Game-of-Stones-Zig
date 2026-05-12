@@ -2,8 +2,8 @@ const std = @import("std");
 const Io = std.Io;
 const print = std.debug.print;
 
-const heap = @import("bench_heap.zig");
-const board = @import("bench_board.zig");
+const heap = @import("heap_bench.zig");
+const board = @import("board_bench.zig");
 
 pub fn benchmark(io: Io, comptime func: fn () void) f64 {
     var minDur: i96 = std.math.maxInt(i96);
@@ -24,6 +24,7 @@ pub fn main(init: std.process.Init) void {
     print("heap: {:.3} sec/1B\n", .{benchmark(io, heap.benchHeapAdd)});
     print("--- Board ---\n", .{});
     print("clone:      {:.3} sec/10M\n", .{benchmark(io, board.benchBoardClone)});
+    print("topPlaces:  {:.3} sec/1M\n", .{benchmark(io, board.benchTopPlaces)});
     print("updateRow:  {:.3} sec/1M\n", .{benchmark(io, board.benchUpdateRow)});
     print("placeStone: {:.3} sec/100K\n", .{benchmark(io, board.benchPlaceStone)});
     print("rollout:    {:.3} sec/100K\n", .{benchmark(io, board.benchRollout)});

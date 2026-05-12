@@ -15,6 +15,7 @@ pub fn build(b: *std.Build) void {
     options.addOption(Tree, "tree", option_tree);
     options.addOption(usize, "board_size", option_board_size);
 
+    // base
     const base = b.addModule("base", .{
         .root_source_file = b.path("src/base/base.zig"),
         .target = target,
@@ -22,12 +23,14 @@ pub fn build(b: *std.Build) void {
     });
     base.addOptions("options", options);
 
+    // heap
     const heap = b.addModule("heap", .{
         .root_source_file = b.path("src/heap/heap.zig"),
         .target = target,
         .optimize = optimize,
     });
 
+    // board
     const board = b.addModule("board", .{
         .root_source_file = b.path("src/board/Board.zig"),
         .target = target,
@@ -35,6 +38,16 @@ pub fn build(b: *std.Build) void {
     });
     board.addImport("base", base);
     board.addImport("heap", heap);
+
+    // connect6
+    const connect6 = b.addModule("connect6", .{
+        .root_source_file = b.path("src/connect6/Connect6.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    connect6.addImport("base", base);
+    connect6.addImport("board", board);
+    connect6.addImport("heap", heap);
 
     // sim
     const sim = b.addModule("sim", .{
@@ -59,8 +72,16 @@ pub fn build(b: *std.Build) void {
         .root_module = board,
     });
     const run_board_tests = b.addRunArtifact(board_tests);
-    const test_step = b.step("test-board", "Run Board tests");
-    test_step.dependOn(&run_board_tests.step);
+    const test_board_step = b.step("test-board", "Run Board tests");
+    test_board_step.dependOn(&run_board_tests.step);
+
+    // Test: connect6
+    const connect6_tests = b.addTest(.{
+        .root_module = connect6,
+    });
+    const run_connect6_tests = b.addRunArtifact(connect6_tests);
+    const test_connect6_step = b.step("test-connect6", "Run Connect6 tests");
+    test_connect6_step.dependOn(&run_connect6_tests.step);
 
     // Benchmarks:
     const benchmarks = b.addModule("benchmarks", .{

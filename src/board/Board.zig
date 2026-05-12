@@ -72,7 +72,14 @@ values: [2][n_places]Value = values_blk: {
     break :values_blk values;
 },
 
-pub fn topPlaces(self: *Board, comptime turn: Player, places: *std.ArrayList(PlaceValue)) void {
+pub fn clone(self: Board) Board {
+    var result = Board{ .value = self.value };
+    @memcpy(&result.places, &self.places);
+    @memcpy(&result.values, &self.values);
+    return result;
+}
+
+pub fn topPlaces(self: *Board, turn: Player, places: *std.ArrayList(PlaceValue)) void {
     for (0..n_places) |offset| {
         const value = self.values[@intFromEnum(turn)][offset];
         if (self.places[offset] == .none and value > 0) {
@@ -159,13 +166,6 @@ pub fn updateRow(self: *Board, start: usize, delta: usize, n: usize, values: [2]
 
 fn getPlace(self: Board, offset: usize) usize {
     return @intCast(@intFromEnum(self.places[offset]));
-}
-
-pub fn clone(self: Board) Board {
-    var result = Board{ .value = self.value };
-    @memcpy(&result.places, &self.places);
-    @memcpy(&result.values, &self.values);
-    return result;
 }
 
 pub fn maxValue(self: Board, player: Player) Value {
