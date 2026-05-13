@@ -9,7 +9,7 @@ const PlaceValue = @import("board").PlaceValue;
 
 pub fn benchBoardClone() void {
     var board = Board{};
-    for (0..5_000_000) |_| {
+    for (0..500_000) |_| {
         const clone = board.clone();
         std.mem.doNotOptimizeAway(clone);
         board = clone.clone();
@@ -61,7 +61,7 @@ pub fn benchPlaceStone() void {
         places.appendAssumeCapacity(heap.items[0].place);
         clone.placeStone(heap.items[0].place, .second);
     }
-    for (0..1_000) |_| {
+    for (0..10_000) |_| {
         clone = board.clone();
         for (0..50) |i| {
             clone.placeStone(places.items[2 * i], .first);
@@ -81,7 +81,7 @@ pub fn benchRollout() void {
     board.placeStone(place3, .first);
     var buf: [20]PlaceValue = undefined;
     var heap: std.ArrayList(PlaceValue) = .initBuffer(&buf);
-    for (0..1_000) |_| {
+    for (0..10_000) |_| {
         var clone = board.clone();
         for (0..50) |_| {
             heap.clearRetainingCapacity();

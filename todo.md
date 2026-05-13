@@ -1,3 +1,1 @@
-* Place.format
-* PlaceValue.format
-* Board.format
+* refactor Mcts.Node (use slices)

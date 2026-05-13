@@ -1,8 +1,9 @@
+const Connect6 = @This();
+
 const std = @import("std");
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 
-const Connect6 = @This();
 const base = @import("base");
 const game = base.game;
 const board_size = base.board_size;

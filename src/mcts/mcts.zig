@@ -8,12 +8,13 @@ const Idx = u32;
 
 pub fn Mcts(comptime Game: type, comptime C: f64) type {
     return struct {
+        const Self = @This();
+
         tree: ArrayList(Node) = .empty,
         game: *Game,
         allocator: std.mem.Allocator,
         io: std.Io,
 
-        const Self = @This();
         const MS = MoveScore(Game.Move);
 
         const Node = struct {
@@ -79,14 +80,15 @@ pub fn Mcts(comptime Game: type, comptime C: f64) type {
         fn expand(self: *Self) void {
             var g = self.game.clone();
             var idx: Idx = 0;
-            var parent_indices: ArrayList(Idx) = .empty;
+            var parent_indices_buffer: [100]Idx = undefined;
+            var parent_indices: ArrayList(Idx) = .initBuffer(&parent_indices_buffer);
             defer parent_indices.deinit(self.allocator);
-            parent_indices.append(self.allocator, 0) catch unreachable;
+            parent_indices.appendAssumeCapacity(self.allocator, 0);
             while (true) {
                 const node = &self.tree.items[idx];
                 if (node.n_children == 0) break;
                 idx = self.select_child_idx(idx);
-                parent_indices.append(self.allocator, idx) catch unreachable;
+                parent_indices.appendAssumeCapacity(self.allocator, idx);
                 const child = &self.tree.items[idx];
                 g.playMove(child.ms.move);
             }

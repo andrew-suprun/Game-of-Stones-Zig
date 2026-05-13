@@ -1,3 +1,5 @@
+pub const Board = @This();
+
 const std = @import("std");
 
 const base = @import("base");
@@ -14,7 +16,6 @@ const value_table_size = win_stones * win_stones + 1;
 const score_table = Board.scoreTable();
 const value_table = Board.valueTable();
 
-pub const Board = @This();
 pub const max_places = 32;
 pub const win = 5000;
 pub const inf = 8000;
@@ -172,11 +173,11 @@ pub fn updateRow(self: *Board, start: usize, delta: usize, n: usize, values: [2]
     for (0..n) |_| {
         stones += self.getPlace(offset + delta * (win_stones - 1));
         const placeValue0 = values[0][stones];
-        const placeValue1 = values[1][stones];
-        if (placeValue0 != 0 or placeValue1 != 0) {
+        // const placeValue1 = values[1][stones];
+        if (placeValue0 != 0) {
             inline for (0..win_stones) |j| {
                 self.values[0][offset + j * delta] += placeValue0;
-                self.values[1][offset + j * delta] += placeValue1;
+                // self.values[1][offset + j * delta] += placeValue1;
             }
         }
         stones -= self.getPlace(offset);
