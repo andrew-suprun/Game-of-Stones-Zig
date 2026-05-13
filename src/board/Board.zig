@@ -109,8 +109,6 @@ pub fn topPlaces(self: *Board, turn: Player, places: *std.ArrayList(PlaceValue))
 }
 
 pub fn placeStone(self: *Board, place: Place, turn: Player) void {
-    const values = Board.value_table[@intFromEnum(turn)];
-
     const x = place.offset % board_size;
     const y = place.offset / board_size;
 
@@ -124,14 +122,14 @@ pub fn placeStone(self: *Board, place: Place, turn: Player) void {
         const x_start = @max(0, x - win_stones + 1);
         const x_end = @min(x + win_stones, board_size) - win_stones + 1;
         const n = x_end - x_start;
-        self.updateRow(y * board_size + x_start, 1, n, values);
+        self.updateRow(y * board_size + x_start, 1, n, turn);
     }
 
     {
         const y_start = @max(win_stones - 1, y) + 1 - win_stones;
         const y_end = @min(y + win_stones, board_size) - win_stones + 1;
         const n = y_end - y_start;
-        self.updateRow(y_start * board_size + x, board_size, n, values);
+        self.updateRow(y_start * board_size + x, board_size, n, turn);
     }
 
     const m = 1 + @min(x, y, board_size - 1 - x, board_size - 1 - y);
@@ -143,7 +141,7 @@ pub fn placeStone(self: *Board, place: Place, turn: Player) void {
             const mn = @min(x, y, win_stones - 1);
             const x_start = x - mn;
             const y_start = y - mn;
-            self.updateRow(y_start * board_size + x_start, board_size + 1, n, values);
+            self.updateRow(y_start * board_size + x_start, board_size + 1, n, turn);
         }
     }
 
@@ -153,7 +151,7 @@ pub fn placeStone(self: *Board, place: Place, turn: Player) void {
             const mn = @min(board_size - 1 - x, y, win_stones - 1);
             const x_start = x + mn;
             const y_start = y - mn;
-            self.updateRow(y_start * board_size + x_start, board_size - 1, n, values);
+            self.updateRow(y_start * board_size + x_start, board_size - 1, n, turn);
         }
     }
 
@@ -162,7 +160,9 @@ pub fn placeStone(self: *Board, place: Place, turn: Player) void {
     self.values[1][place.offset] = -inf;
 }
 
-pub fn updateRow(self: *Board, start: usize, delta: usize, n: usize, values: [2][value_table_size]Value) void {
+pub fn updateRow(self: *Board, start: usize, comptime delta: usize, n: usize, turn: Player) void {
+    const values = Board.value_table[@intFromEnum(turn)];
+
     var offset = start;
     var stones: usize = 0;
 
@@ -173,11 +173,11 @@ pub fn updateRow(self: *Board, start: usize, delta: usize, n: usize, values: [2]
     for (0..n) |_| {
         stones += self.getPlace(offset + delta * (win_stones - 1));
         const placeValue0 = values[0][stones];
-        // const placeValue1 = values[1][stones];
-        if (placeValue0 != 0) {
+        const placeValue1 = values[1][stones];
+        if (placeValue0 != 0 or placeValue1 != 0) {
             inline for (0..win_stones) |j| {
                 self.values[0][offset + j * delta] += placeValue0;
-                // self.values[1][offset + j * delta] += placeValue1;
+                self.values[1][offset + j * delta] += placeValue1;
             }
         }
         stones -= self.getPlace(offset);

@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const Benchmark = @import("root").Benchmark;
 const game = @import("base").game;
 const board_size = @import("base").board_size;
 const Value = @import("base").Value;
@@ -7,38 +8,39 @@ const Board = @import("board").Board;
 const Place = @import("board").Place;
 const PlaceValue = @import("board").PlaceValue;
 
-pub fn benchBoardClone() void {
+pub fn benchClone(io: std.Io) void {
+    var bm = Benchmark.init(io);
     var board = Board{};
     for (0..500_000) |_| {
+        bm.start();
         const clone = board.clone();
-        std.mem.doNotOptimizeAway(clone);
+        bm.keep(clone);
         board = clone.clone();
-        std.mem.doNotOptimizeAway(board);
+        bm.keep(board);
+        bm.stop();
     }
+    std.debug.print("clone:      {:5} msec/1M\n", .{bm.toMilliseconds()});
 }
 
-pub fn benchUpdateRow() void {
+pub fn benchUpdateRow(io: std.Io) void {
+    var bm = Benchmark.init(io);
     var board = Board{};
-    const table_size = if (game == .Gomoku) 26 else 37;
-    var values: [2][table_size]Value = undefined;
-    for (0..2) |i| {
-        for (0..table_size) |j| {
-            values[i][j] = 1;
-        }
-    }
+    bm.start();
     for (0..10_000) |_| {
         var clone = board.clone();
         for (0..10) |y| {
             for (0..10) |x| {
-                const offset = y * board_size + x;
-                clone.updateRow(offset, board_size + 1, 6, values);
+                clone.updateRow(y * board_size + x, board_size + 1, 6, .first);
             }
         }
-        std.mem.doNotOptimizeAway(clone);
+        bm.keep(clone);
     }
+    bm.stop();
+    std.debug.print("updateRow:  {:5} msec/1M\n", .{bm.toMilliseconds()});
 }
 
-pub fn benchPlaceStone() void {
+pub fn benchPlaceStone(io: std.Io) void {
+    var bm = Benchmark.init(io);
     var board = Board{};
     const place1 = Place.init("j10") catch unreachable;
     board.placeStone(place1, .first);
@@ -61,17 +63,21 @@ pub fn benchPlaceStone() void {
         places.appendAssumeCapacity(heap.items[0].place);
         clone.placeStone(heap.items[0].place, .second);
     }
+    bm.start();
     for (0..10_000) |_| {
         clone = board.clone();
         for (0..50) |i| {
             clone.placeStone(places.items[2 * i], .first);
             clone.placeStone(places.items[2 * i + 1], .second);
         }
-        std.mem.doNotOptimizeAway(clone);
+        bm.keep(clone);
     }
+    bm.stop();
+    std.debug.print("placeStone: {:5} msec/1M\n", .{bm.toMilliseconds()});
 }
 
-pub fn benchRollout() void {
+pub fn benchRollout(io: std.Io) void {
+    var bm = Benchmark.init(io);
     var board = Board{};
     const place1 = Place.init("j10") catch unreachable;
     board.placeStone(place1, .first);
@@ -81,6 +87,7 @@ pub fn benchRollout() void {
     board.placeStone(place3, .first);
     var buf: [20]PlaceValue = undefined;
     var heap: std.ArrayList(PlaceValue) = .initBuffer(&buf);
+    bm.start();
     for (0..10_000) |_| {
         var clone = board.clone();
         for (0..50) |_| {
@@ -91,25 +98,34 @@ pub fn benchRollout() void {
             clone.topPlaces(.second, &heap);
             clone.placeStone(heap.items[0].place, .second);
         }
-        std.mem.doNotOptimizeAway(clone);
-        // std.debug.print("{f}\n", .{clone});
+        bm.keep(clone);
     }
+    bm.stop();
+    std.debug.print("rollout:    {:5} msec/1M\n", .{bm.toMilliseconds()});
 }
 
-pub fn benchTopPlaces() void {
+pub fn benchTopPlaces(io: std.Io) void {
+    var bm = Benchmark.init(io);
     var board = Board{};
     var buf: [20]PlaceValue = undefined;
     var places: std.ArrayList(PlaceValue) = .initBuffer(&buf);
+    bm.start();
     for (0..1_000_000) |_| {
         places.clearRetainingCapacity();
         board.topPlaces(.first, &places);
-        std.mem.doNotOptimizeAway(places);
+        bm.keep(places);
     }
+    bm.stop();
+    std.debug.print("topPlaces:  {:5} msec/1M\n", .{bm.toMilliseconds()});
 }
 
-pub fn benchBoardMaxValue() void {
+pub fn benchMaxValue(io: std.Io) void {
+    var bm = Benchmark.init(io);
     var board = Board{};
+    bm.start();
     for (0..1_000_000_000) |_| {
-        std.mem.doNotOptimizeAway(board.maxValue(.first));
+        bm.keep(board.maxValue(.first));
     }
+    bm.stop();
+    std.debug.print("maxValue:   {:5} msec/1B\n", .{bm.toMilliseconds()});
 }

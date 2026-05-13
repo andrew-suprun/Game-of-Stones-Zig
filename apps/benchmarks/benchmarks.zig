@@ -5,28 +5,49 @@ const print = std.debug.print;
 const heap = @import("heap_bench.zig");
 const board = @import("board_bench.zig");
 
-pub fn benchmark(io: Io, comptime func: fn () void) f64 {
-    var minDur: i96 = std.math.maxInt(i96);
-    for (0..5) |_| {
-        const start = Io.Clock.awake.now(io).nanoseconds;
-        func();
-        const dur = Io.Clock.awake.now(io).nanoseconds - start;
-        if (minDur > dur) {
-            minDur = dur;
-        }
+pub const Benchmark = struct {
+    io: std.Io,
+    acc: i96 = 0,
+    started: i96 = 0,
+
+    pub fn init(io: std.Io) Benchmark {
+        return Benchmark{ .io = io };
     }
-    return @as(f64, @floatFromInt(minDur)) / std.time.ns_per_s;
-}
+
+    pub inline fn start(self: *Benchmark) void {
+        self.started = Io.Clock.awake.now(self.io).nanoseconds;
+    }
+
+    pub inline fn stop(self: *Benchmark) void {
+        self.acc += Io.Clock.awake.now(self.io).nanoseconds - self.started;
+    }
+
+    pub inline fn keep(_: *Benchmark, value: anytype) void {
+        std.mem.doNotOptimizeAway(value);
+    }
+
+    pub inline fn toSeconds(self: Benchmark) i64 {
+        return @intCast(@divTrunc(self.acc, std.time.s_per_ms));
+    }
+
+    pub inline fn toMilliseconds(self: Benchmark) i64 {
+        return @intCast(@divTrunc(self.acc, std.time.ns_per_ms));
+    }
+
+    pub inline fn toMicroseconds(self: Benchmark) i64 {
+        return @intCast(@divTrunc(self.acc, std.time.ns_per_us));
+    }
+};
 
 pub fn main(init: std.process.Init) void {
     const io = init.io;
     print("--- heap ---\n", .{});
-    print("heap: {:.3} sec/100M\n", .{benchmark(io, heap.benchHeapAdd)});
-    print("--- Board ---\n", .{});
-    print("clone:      {:.3} sec/1M\n", .{benchmark(io, board.benchBoardClone)});
-    print("topPlaces:  {:.3} sec/1M\n", .{benchmark(io, board.benchTopPlaces)});
-    print("updateRow:  {:.3} sec/1M\n", .{benchmark(io, board.benchUpdateRow)});
-    print("placeStone: {:.3} sec/1M\n", .{benchmark(io, board.benchPlaceStone)});
-    print("rollout:    {:.3} sec/1M\n", .{benchmark(io, board.benchRollout)});
-    print("maxValue:   {:.3} sec/1B\n", .{benchmark(io, board.benchBoardMaxValue)});
+    heap.benchHeapAdd(io);
+    print("\n--- Board ---\n", .{});
+    board.benchClone(io);
+    board.benchUpdateRow(io);
+    board.benchPlaceStone(io);
+    board.benchRollout(io);
+    board.benchTopPlaces(io);
+    board.benchMaxValue(io);
 }

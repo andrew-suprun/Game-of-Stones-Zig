@@ -1,8 +1,10 @@
 --- heap ---
-heap: 0.355 sec/1B
+heap: 3571 msec/1B
+
 --- Board ---
-clone:      0.365 sec/10M
-updateRow:  0.425 sec/1M
-placeStone: 0.154 sec/100K
-rollout:    0.297 sec/100K
-maxValue:   0.310 sec/1B
+clone:        +29 msec/1M
+updateRow:   +436 msec/1M
+placeStone: +1580 msec/1M
+rollout:    +3091 msec/1M
+topPlaces:  +1108 msec/1M
+maxValue:    +312 msec/1B

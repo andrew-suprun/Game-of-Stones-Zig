@@ -1,19 +1,24 @@
 const std = @import("std");
 
+const Benchmark = @import("root").Benchmark;
 const heapAdd = @import("heap").heapAdd;
 
-fn testLess(i: usize, j: usize) bool {
+fn testLt(i: usize, j: usize) bool {
     return i < j;
 }
 
-pub fn benchHeapAdd() void {
+pub fn benchHeapAdd(io: std.Io) void {
     var buf: [20]usize = undefined;
     var heap = std.ArrayList(usize).initBuffer(&buf);
-    for (0..1_000_000) |_| {
+    var bm = Benchmark.init(io);
+    bm.start();
+    for (0..10_000_000) |_| {
         heap.clearRetainingCapacity();
         for (0..100) |i| {
-            heapAdd(i * 17 % 100, &heap, testLess);
+            heapAdd(i * 17 % 100, &heap, testLt);
         }
-        std.mem.doNotOptimizeAway(heap);
+        bm.keep(heap);
     }
+    bm.stop();
+    std.debug.print("heap: {d} msec/1B\n", .{bm.toMilliseconds()});
 }
