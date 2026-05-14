@@ -29,7 +29,7 @@ pub fn Mcts(comptime Game: type, comptime C: f64) type {
             return std.Io.Clock.awake.now(self.io);
         }
 
-        pub fn search(self: *Self, max_moves: usize, max_places: usize, max_time_ms: i64) ArrayList(Game.Move) {
+        pub fn search(self: *Self, max_moves: usize, max_places: usize, max_time_ms: i64, pv: []Game.Move) []Game.Move {
             self.root.deinit(self.allocator);
             self.root = .init(.{ .move = .{}, .score = .{ .value = 0 } });
             const start = self.timestamp();
@@ -39,7 +39,7 @@ pub fn Mcts(comptime Game: type, comptime C: f64) type {
             while (self.timestamp().nanoseconds < deadline) {
                 self.root.expand(&g, max_moves, max_places, self.allocator);
                 if (self.root.ms.score.isDecisive()) {
-                    return self.pv();
+                    return self.calcPv(pv);
                 }
                 var n_undecisive: usize = 0;
                 for (self.root.children) |child| {
@@ -48,27 +48,24 @@ pub fn Mcts(comptime Game: type, comptime C: f64) type {
                     }
                 }
                 if (n_undecisive == 1) {
-                    return self.pv();
+                    return self.calcPv(pv);
                 }
             }
 
-            return self.pv();
+            return self.calcPv(pv);
         }
 
-        fn pv(self: *Self) ArrayList(Game.Move) {
-            var result: ArrayList(Game.Move) = .empty;
-            _ = self;
-            _ = &result;
+        fn calcPv(self: Self, buf: []Game.Move) []Game.Move {
+            var idx: usize = 0;
+            var node = self.root;
+            while (idx < buf.len) {
+                buf[idx] = node.ms.move;
+                if (node.children.len == 0) break;
+                node = node.bestChild();
+                idx += 1;
+            }
 
-            // var pv = List[Self.G.Move]()
-            // var idx: Idx = 0
-            // while True:
-            //     if self.tree[idx].n_children == 0:
-            //         return pv^
-            //     idx = self._best_child_idx(idx)
-            //     pv.append(self.tree[idx].move)
-
-            return result;
+            return buf[0..idx];
         }
     };
 }
@@ -99,7 +96,7 @@ fn MctsNode(comptime Game: type, comptime C: f64) type {
 
         fn expand(self: *Self, game: *Game, max_moves: usize, max_places: usize, allocator: Allocator) void {
             if (self.children.len > 0) {
-                var child = self.select_child();
+                var child = self.selectChild();
                 game.playMove(child.ms.move);
                 child.expand(game, max_moves, max_places, allocator);
             } else {
@@ -120,30 +117,39 @@ fn MctsNode(comptime Game: type, comptime C: f64) type {
             self.n_sims += 1;
         }
 
-        fn select_child(self: Self) *Self {
-            _ = &C;
-            // const parent = &self.tree.items[parent_idx];
-            // var selected_child_idx: Idx = std.math.maxInt(u32);
-            // var max_value = -std.math.inf(f64);
-            // for (parent.first_child..parent.first_child + parent.n_children) |child_idx| {
-            //     const child = self.tree.items[child_idx];
+        fn selectChild(self: Self) *Self {
+            var selected_child: ?*Self = null;
+            var max_value = -std.math.inf(f64);
+            const node_sims: f64 = @floatFromInt(self.n_sims);
+            for (self.children) |*child| {
+                switch (child.ms.score) {
+                    .win, .loss, .draw => continue,
+                    .value => |v| {
+                        const value: f64 = @floatFromInt(v);
+                        const child_sims: f64 = @floatFromInt(child.n_sims);
+                        const child_value: f64 = value + C * node_sims / child_sims;
+                        if (max_value < child_value) {
+                            max_value = child_value;
+                            selected_child = child;
+                        }
+                    },
+                }
+            }
+            if (selected_child) |child| {
+                return child;
+            } else {
+                std.debug.panic("Mcts: failed to select node child", .{});
+            }
+        }
 
-            //     switch (child.ms.score) {
-            //         .win, .loss, .draw => continue,
-            //         .value => |v| {
-            //             const fv: f64 = @floatFromInt(v);
-            //             const ps: f64 = @floatFromInt(parent.n_sims);
-            //             const cs: f64 = @floatFromInt(child.n_sims);
-            //             const value: f64 = fv + C * ps / cs;
-            //             if (max_value < value) {
-            //                 max_value = value;
-            //                 selected_child_idx = @intCast(child_idx);
-            //             }
-            //         },
-            //     }
-            // }
-            // std.debug.assert(selected_child_idx != std.math.maxInt(Idx));
-            return &self.children[0];
+        fn bestChild(self: Self) Self {
+            var best_child = self.children[0];
+            for (self.children[1..]) |child| {
+                if (best_child.ms.score.lt(child.ms.score)) {
+                    best_child = child;
+                }
+            }
+            return best_child;
         }
 
         pub fn format(self: Self, w: *std.Io.Writer) std.Io.Writer.Error!void {
@@ -175,6 +181,6 @@ test {
     var game = DummyGame{};
     var tree = Mcts(DummyGame, 1).init(&game, std.testing.allocator, std.testing.io);
     defer tree.deinit();
-    const pv = tree.search(26, 20, 1);
-    _ = pv;
+    var pv_buf: [100]DummyGame.Move = undefined;
+    _ = tree.search(26, 20, 1, &pv_buf);
 }
