@@ -48,20 +48,17 @@ pub fn benchPlaceStone(io: std.Io) void {
     board.placeStone(place2, .second);
     const place3 = Place.init("i10") catch unreachable;
     board.placeStone(place3, .first);
-    var buf: [20]PlaceValue = undefined;
-    var heap: std.ArrayList(PlaceValue) = .initBuffer(&buf);
+    var heap: [20]PlaceValue = undefined;
     var place_buf: [100]Place = undefined;
     var places: std.ArrayList(Place) = .initBuffer(&place_buf);
     var clone = board.clone();
     for (0..50) |_| {
-        heap.clearRetainingCapacity();
-        clone.topPlaces(.first, &heap);
-        places.appendAssumeCapacity(heap.items[0].place);
-        clone.placeStone(heap.items[0].place, .first);
-        heap.clearRetainingCapacity();
-        clone.topPlaces(.second, &heap);
-        places.appendAssumeCapacity(heap.items[0].place);
-        clone.placeStone(heap.items[0].place, .second);
+        const top_places1 = clone.topPlaces(.first, &heap);
+        places.appendAssumeCapacity(top_places1[0].place);
+        clone.placeStone(top_places1[0].place, .first);
+        const top_places2 = clone.topPlaces(.second, &heap);
+        places.appendAssumeCapacity(top_places2[0].place);
+        clone.placeStone(top_places2[0].place, .second);
     }
     bm.start();
     for (0..10_000) |_| {
@@ -85,18 +82,15 @@ pub fn benchRollout(io: std.Io) void {
     board.placeStone(place2, .second);
     const place3 = Place.init("i10") catch unreachable;
     board.placeStone(place3, .first);
-    var buf: [20]PlaceValue = undefined;
-    var heap: std.ArrayList(PlaceValue) = .initBuffer(&buf);
+    var heap: [20]PlaceValue = undefined;
     bm.start();
     for (0..10_000) |_| {
         var clone = board.clone();
         for (0..50) |_| {
-            heap.clearRetainingCapacity();
-            clone.topPlaces(.first, &heap);
-            clone.placeStone(heap.items[0].place, .first);
-            heap.clearRetainingCapacity();
-            clone.topPlaces(.second, &heap);
-            clone.placeStone(heap.items[0].place, .second);
+            const top_places1 = clone.topPlaces(.first, &heap);
+            clone.placeStone(top_places1[0].place, .first);
+            const top_places2 = clone.topPlaces(.second, &heap);
+            clone.placeStone(top_places2[0].place, .second);
         }
         bm.keep(clone);
     }
@@ -107,13 +101,10 @@ pub fn benchRollout(io: std.Io) void {
 pub fn benchTopPlaces(io: std.Io) void {
     var bm = Benchmark.init(io);
     var board = Board{};
-    var buf: [20]PlaceValue = undefined;
-    var places: std.ArrayList(PlaceValue) = .initBuffer(&buf);
+    var places: [20]PlaceValue = undefined;
     bm.start();
     for (0..1_000_000) |_| {
-        places.clearRetainingCapacity();
-        board.topPlaces(.first, &places);
-        bm.keep(places);
+        bm.keep(board.topPlaces(.first, &places));
     }
     bm.stop();
     std.debug.print("topPlaces:  {:5} msec/1M\n", .{bm.toMilliseconds()});

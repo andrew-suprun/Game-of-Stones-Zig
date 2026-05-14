@@ -64,10 +64,9 @@ pub fn playMove(self: *Connect6, move: Move) void {
     self.turn = opponent(self.turn);
 }
 
-pub fn topMoves(self: *Connect6, max_places: usize, moves: *std.ArrayList(MoveScore)) void {
+pub fn topMoves(self: Connect6, max_places: usize, moves: *std.ArrayList(MoveScore)) void {
     var place_buf: [Board.max_places]PlaceValue = undefined;
-    var top_places: std.ArrayList(PlaceValue) = .initBuffer(place_buf[0..max_places]);
-    self.board.topPlaces(self.turn, &top_places);
+    const top_places = self.board.topPlaces(self.turn, place_buf[0..max_places]);
 
     std.debug.assert(top_places.items.len >= 2);
 

@@ -15,12 +15,12 @@ pub const Score = union(enum) {
     loss,
     draw,
 
-    // pub fn is_decisive(self: Score) bool {
-    //     return switch (self) {
-    //         .win, .loss, .draw => true,
-    //         .value => false,
-    //     };
-    // }
+    pub fn isDecisive(self: Score) bool {
+        return switch (self) {
+            .win, .loss, .draw => true,
+            .value => false,
+        };
+    }
 
     pub fn lt(self: Score, other: Score) bool {
         return switch (self) {
@@ -37,6 +37,15 @@ pub const Score = union(enum) {
                 .draw => vx < 0,
                 .value => |vy| vx < vy,
             },
+        };
+    }
+
+    pub fn neg(self: Score) Score {
+        return switch (self) {
+            .win => .loss,
+            .loss => .win,
+            .draw => .draw,
+            .value => |v| -v,
         };
     }
 

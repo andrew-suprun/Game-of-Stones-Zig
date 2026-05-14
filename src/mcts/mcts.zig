@@ -1,48 +1,27 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
+const Allocator = std.mem.Allocator;
 
 const base = @import("base");
 const MoveScore = base.MoveScore;
 
-const Idx = u32;
-
 pub fn Mcts(comptime Game: type, comptime C: f64) type {
     return struct {
         const Self = @This();
-
-        tree: ArrayList(Node) = .empty,
-        game: *Game,
-        allocator: std.mem.Allocator,
-        io: std.Io,
-
+        const Node = MctsNode(Game, C);
         const MS = MoveScore(Game.Move);
 
-        const Node = struct {
-            ms: MoveScore(Game.Move),
-            n_sims: u32,
-            first_child: Idx,
-            n_children: u32,
+        root: Node = .init(.{ .move = .{}, .score = .{ .value = 0 } }),
+        game: *Game,
+        allocator: Allocator,
+        io: std.Io,
 
-            pub fn init(ms: MS) Node {
-                return Node{
-                    .ms = ms,
-                    .n_sims = 1,
-                    .first_child = 0,
-                    .n_children = 0,
-                };
-            }
-
-            pub fn format(self: Node, w: *std.Io.Writer) std.Io.Writer.Error!void {
-                try w.print("{f} sims: {d}", .{ self.ms, self.n_sims });
-            }
-        };
-
-        pub fn init(game: *Game, allocator: std.mem.Allocator, io: std.Io) Self {
+        pub fn init(game: *Game, allocator: Allocator, io: std.Io) Self {
             return Self{ .game = game, .allocator = allocator, .io = io };
         }
 
         pub fn deinit(self: *Self) void {
-            self.tree.deinit(self.allocator);
+            self.root.deinit(self.allocator);
         }
 
         fn timestamp(self: Self) std.Io.Timestamp {
@@ -50,98 +29,29 @@ pub fn Mcts(comptime Game: type, comptime C: f64) type {
         }
 
         pub fn search(self: *Self, max_time_ms: i64) ArrayList(Game.Move) {
-            self.tree.clearRetainingCapacity();
-            self.tree.append(self.allocator, .init(.{ .move = .{}, .score = .loss })) catch unreachable;
+            self.root.deinit(self.allocator);
+            self.root = .init(.{ .move = .{}, .score = .{ .value = 0 } });
             const start = self.timestamp();
             const deadline = start.addDuration(.fromMilliseconds(max_time_ms)).nanoseconds;
 
-            while (self.timestamp().nanoseconds < deadline) {
-                self.expand();
-            }
-
-            // while perf_counter_ns() < deadline:
-            //     self.expand(game)
-            //     var n_undecisive = 0
-            //     ref root = self.tree[0]
-            //     if root.move.score().is_loss():
-            //         return self._pv()
-            //     for idx in range(root.first_child, root.first_child + root.n_children):
-            //         ref child = self.tree[idx]
-
-            //         if not child.move.score().is_decisive():
-            //             n_undecisive += 1
-
-            //     if n_undecisive <= 1:
-            //         break
-
-            return self.pv();
-        }
-
-        fn expand(self: *Self) void {
             var g = self.game.clone();
-            var idx: Idx = 0;
-            var parent_indices_buffer: [100]Idx = undefined;
-            var parent_indices: ArrayList(Idx) = .initBuffer(&parent_indices_buffer);
-            defer parent_indices.deinit(self.allocator);
-            parent_indices.appendAssumeCapacity(self.allocator, 0);
-            while (true) {
-                const node = &self.tree.items[idx];
-                if (node.n_children == 0) break;
-                idx = self.select_child_idx(idx);
-                parent_indices.appendAssumeCapacity(self.allocator, idx);
-                const child = &self.tree.items[idx];
-                g.playMove(child.ms.move);
-            }
-            // while True:
-            //     ref node = self.tree[idx]
-            //     if node.n_children == 0:
-            //         break
-            //     idx = self._select_child_idx(idx)
-            //     parent_indices.append(idx)
-            //     ref child = self.tree[idx]
-            //     g.play_move(child.move)
-
-            // var moves = g.moves()
-            // ref leaf = self.tree[idx]
-            // leaf.first_child = Idx(len(self.tree))
-            // leaf.n_children = UInt32(len(moves))
-            // for move in moves:
-            //     self.tree.append(Self.Node(move))
-
-            // for parent_idx in reversed(parent_indices):
-            //     ref parent = self.tree[parent_idx]
-            //     parent.n_sims += 1
-            //     var best_score = Loss
-            //     for idx in range(parent.first_child, parent.first_child + parent.n_children):
-            //         ref child = self.tree[idx]
-            //         best_score = best_score.max(child.move.score())
-
-            //     parent.move.set_score(-best_score)
-        }
-
-        fn select_child_idx(self: Self, parent_idx: Idx) Idx {
-            const parent = &self.tree.items[parent_idx];
-            var selected_child_idx: Idx = std.math.maxInt(u32);
-            var max_value = -std.math.inf(f64);
-            for (parent.first_child..parent.first_child + parent.n_children) |child_idx| {
-                const child = self.tree.items[child_idx];
-
-                switch (child.ms.score) {
-                    .win, .loss, .draw => continue,
-                    .value => |v| {
-                        const fv: f64 = @floatFromInt(v);
-                        const ps: f64 = @floatFromInt(parent.n_sims);
-                        const cs: f64 = @floatFromInt(child.n_sims);
-                        const value: f64 = fv + C * ps / cs;
-                        if (max_value < value) {
-                            max_value = value;
-                            selected_child_idx = @intCast(child_idx);
-                        }
-                    },
+            while (self.timestamp().nanoseconds < deadline) {
+                self.root.expand(&g, self.allocator);
+                if (self.root.ms.score.isDecisive()) {
+                    return self.pv();
+                }
+                var n_undecisive: usize = 0;
+                for (self.root.children) |child| {
+                    if (!child.ms.score.isDecisive()) {
+                        n_undecisive += 1;
+                    }
+                }
+                if (n_undecisive == 1) {
+                    return self.pv();
                 }
             }
-            std.debug.assert(selected_child_idx != std.math.maxInt(Idx));
-            return selected_child_idx;
+
+            return self.pv();
         }
 
         fn pv(self: *Self) ArrayList(Game.Move) {
@@ -162,12 +72,92 @@ pub fn Mcts(comptime Game: type, comptime C: f64) type {
     };
 }
 
+fn MctsNode(comptime Game: type, comptime C: f64) type {
+    return struct {
+        const Self = @This();
+        const MS = MoveScore(Game.Move);
+
+        ms: MS,
+        n_sims: u32,
+        children: []Self,
+
+        pub fn init(ms: MS) Self {
+            return Self{
+                .ms = ms,
+                .n_sims = 1,
+                .children = &.{},
+            };
+        }
+
+        pub fn deinit(self: *Self, allocator: Allocator) void {
+            for (self.children) |*child| {
+                child.deinit(allocator);
+            }
+            allocator.free(self.children);
+        }
+
+        fn expand(self: *Self, game: *Game, allocator: Allocator) void {
+            if (self.children.len > 0) {
+                var child = self.select_child();
+                game.playMove(child.ms.move);
+                child.expand(game, allocator);
+            } else {
+                const moves = game.topMoves();
+                self.children = allocator.alloc(Self, moves.len) catch unreachable;
+                for (self.children, moves) |*child, move| {
+                    child.init(move);
+                }
+            }
+            var best_score = .loss;
+            for (self.children) |child| {
+                if (best_score.lt(child.ms.score)) {
+                    best_score = child.ms.score;
+                }
+            }
+            self.score = best_score.neg();
+            self.n_sims += 1;
+        }
+
+        fn select_child(self: Self) *Self {
+            _ = &C;
+            // const parent = &self.tree.items[parent_idx];
+            // var selected_child_idx: Idx = std.math.maxInt(u32);
+            // var max_value = -std.math.inf(f64);
+            // for (parent.first_child..parent.first_child + parent.n_children) |child_idx| {
+            //     const child = self.tree.items[child_idx];
+
+            //     switch (child.ms.score) {
+            //         .win, .loss, .draw => continue,
+            //         .value => |v| {
+            //             const fv: f64 = @floatFromInt(v);
+            //             const ps: f64 = @floatFromInt(parent.n_sims);
+            //             const cs: f64 = @floatFromInt(child.n_sims);
+            //             const value: f64 = fv + C * ps / cs;
+            //             if (max_value < value) {
+            //                 max_value = value;
+            //                 selected_child_idx = @intCast(child_idx);
+            //             }
+            //         },
+            //     }
+            // }
+            // std.debug.assert(selected_child_idx != std.math.maxInt(Idx));
+            return &self.children[0];
+        }
+
+        pub fn format(self: Self, w: *std.Io.Writer) std.Io.Writer.Error!void {
+            try w.print("{f} sims: {d}", .{ self.ms, self.n_sims });
+        }
+    };
+}
+
 const DummyMove = struct {
     pub fn format(_: DummyMove, _: *std.Io.Writer) std.Io.Writer.Error!void {}
 };
 
 const DummyGame = struct {
     const Move = DummyMove;
+
+    pub fn topMoves(_: DummyGame, _: usize, _: *std.ArrayList(MoveScore(Move))) void {}
 
     pub fn playMove(_: *DummyGame, _: Move) void {}
 

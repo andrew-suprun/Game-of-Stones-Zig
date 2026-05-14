@@ -98,14 +98,16 @@ pub fn clone(self: Board) Board {
     return result;
 }
 
-pub fn topPlaces(self: *Board, turn: Player, places: *std.ArrayList(PlaceValue)) void {
+pub fn topPlaces(self: Board, turn: Player, places: []PlaceValue) []PlaceValue {
+    var place_list = std.ArrayList(PlaceValue).initBuffer(places);
     for (0..n_places) |offset| {
         const value = self.values[@intFromEnum(turn)][offset];
         if (self.places[offset] == .none and value > 0) {
             const place_value = PlaceValue{ .place = Place{ .offset = offset }, .value = value };
-            heapAdd(place_value, places, lt);
+            heapAdd(place_value, &place_list, lt);
         }
     }
+    return place_list.items;
 }
 
 pub fn placeStone(self: *Board, place: Place, turn: Player) void {
@@ -450,22 +452,20 @@ test topPlaces {
     board.placeStone(try Place.init("j10"), .first);
     board.placeStone(try Place.init("i10"), .second);
     board.placeStone(try Place.init("j9"), .second);
-    var buf: [max_places]PlaceValue = undefined;
-    var places: std.ArrayList(PlaceValue) = .initBuffer(buf[0..20]);
-    board.topPlaces(.first, &places);
-    for (places.items) |place| {
+    var places: [max_places]PlaceValue = undefined;
+    const top_places = board.topPlaces(.first, places[0..20]);
+    for (top_places) |place| {
         try std.testing.expect(place.value >= 30);
     }
-    places.clearRetainingCapacity();
-    board.topPlaces(.second, &places);
-    for (places.items) |place| {
+    const top_places2 = board.topPlaces(.second, places[0..20]);
+    for (top_places2) |place| {
         try std.testing.expect(place.value >= 35);
     }
 }
 
 test {
     var board = Board{};
-    board.updateRow(0, 1, 6, value_table[0]);
+    board.updateRow(0, 1, 6, .first);
 }
 
 // test {
