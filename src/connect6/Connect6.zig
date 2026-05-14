@@ -1,7 +1,6 @@
 const Connect6 = @This();
 
 const std = @import("std");
-const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 
 const base = @import("base");
@@ -64,35 +63,35 @@ pub fn playMove(self: *Connect6, move: Move) void {
     self.turn = opponent(self.turn);
 }
 
-pub fn topMoves(self: Connect6, max_places: usize, moves: *std.ArrayList(MoveScore)) void {
+pub fn topMoves(self: Connect6, max_places: usize, moves: []MoveScore) []MoveScore {
     var place_buf: [Board.max_places]PlaceValue = undefined;
     const top_places = self.board.topPlaces(self.turn, place_buf[0..max_places]);
 
-    std.debug.assert(top_places.items.len >= 2);
+    std.debug.assert(top_places.len >= 2);
 
-    for (0..top_places.items.len - 1) |i| {
-        const pv = top_places.items[i];
+    var move_list = std.ArrayList(MoveScore).initBuffer(moves[0..max_places]);
+    for (0..top_places.len - 1) |i| {
+        const pv = top_places[i];
         const place1 = pv.place;
         const value1 = pv.value;
         if (value1 >= Board.win) {
-            moves.clearRetainingCapacity();
-            moves.appendAssumeCapacity(MoveScore{ .move = .init(place1, place1), .score = .win });
-            return;
+            moves[0] = .{ .move = .init(place1, place1), .score = .win };
+            return moves[0..1];
         }
 
         var board1 = self.board.clone();
         board1.placeStone(place1, self.turn);
 
-        for (i + 1..top_places.items.len) |j| {
-            const place2 = top_places.items[j].place;
+        for (i + 1..top_places.len) |j| {
+            const place2 = top_places[j].place;
             const value2 = board1.values[@intFromEnum(self.turn)][place2.offset];
 
             if (value2 >= Board.win) {
-                moves.clearRetainingCapacity();
-                moves.appendAssumeCapacity(MoveScore{ .move = .init(place1, place2), .score = .win });
-                return;
+                moves[0] = .{ .move = .init(place1, place2), .score = .win };
+                return moves[0..1];
             } else if (value1 + value2 == 0) {
-                moves.appendAssumeCapacity(MoveScore{ .move = .init(place1, place2), .score = .draw });
+                const ms = MoveScore{ .move = .init(place1, place2), .score = .draw };
+                heapAdd(ms, &move_list, lt);
             } else {
                 var board2 = board1.clone();
                 board2.placeStone(place2, self.turn);
@@ -100,14 +99,16 @@ pub fn topMoves(self: Connect6, max_places: usize, moves: *std.ArrayList(MoveSco
                 if (opp_value < Board.inf) {
                     const move_value = self.board.value + value1 + value2 - opp_value;
                     const ms = MoveScore{ .move = .init(place1, place2), .score = .{ .value = move_value } };
-                    heapAdd(ms, moves, lt);
+                    heapAdd(ms, &move_list, lt);
                 }
             }
         }
     }
-    if (moves.items.len == 0) {
-        moves.appendAssumeCapacity(MoveScore{ .move = .init(top_places.items[0].place, top_places.items[1].place), .score = .loss });
+    if (moves.len == 0) {
+        moves[0] = .{ .move = .init(top_places[0].place, top_places[1].place), .score = .loss };
+        return moves[0..1];
     }
+    return move_list.items;
 }
 
 fn opponent(player: Player) Player {
@@ -124,10 +125,9 @@ test "topMoves" {
     c6.playMove(try .initFromStr("i9-i10"));
 
     var move_buf: [20]MoveScore = undefined;
-    var top_moves: std.ArrayList(MoveScore) = .initBuffer(&move_buf);
-    c6.topMoves(16, &top_moves);
-    var best_move = top_moves.items[0];
-    for (top_moves.items) |move| {
+    const top_moves = c6.topMoves(16, &move_buf);
+    var best_move = top_moves[0];
+    for (top_moves) |move| {
         if (best_move.score.lt(move.score)) {
             best_move = move;
         }
