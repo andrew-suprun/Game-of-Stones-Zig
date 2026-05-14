@@ -67,6 +67,20 @@ pub fn Mcts(comptime Game: type, comptime C: f64) type {
 
             return buf[0..idx];
         }
+
+        pub fn format(self: Self, w: *std.Io.Writer) std.Io.Writer.Error!void {
+            try self.formatTree(self.root, 0, w);
+        }
+
+        pub fn formatTree(self: Self, node: Node, depth: usize, w: *std.Io.Writer) std.Io.Writer.Error!void {
+            for (0..depth) |_| {
+                try w.print("|   ", .{});
+            }
+            try w.print("{f}\n", .{node});
+            for (node.children) |child| {
+                try self.formatTree(child, depth + 1, w);
+            }
+        }
     };
 }
 
@@ -183,4 +197,5 @@ test {
     defer tree.deinit();
     var pv_buf: [100]DummyGame.Move = undefined;
     _ = tree.search(26, 20, 1, &pv_buf);
+    std.debug.print("tree: {f}\n", .{tree});
 }
