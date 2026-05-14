@@ -45,7 +45,7 @@ pub const Score = union(enum) {
             .win => .loss,
             .loss => .win,
             .draw => .draw,
-            .value => |v| -v,
+            .value => |v| .{ .value = -v },
         };
     }
 

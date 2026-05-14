@@ -3,6 +3,7 @@ const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 
 const base = @import("base");
+const Score = base.Score;
 const MoveScore = base.MoveScore;
 
 pub fn Mcts(comptime Game: type, comptime C: f64) type {
@@ -28,7 +29,7 @@ pub fn Mcts(comptime Game: type, comptime C: f64) type {
             return std.Io.Clock.awake.now(self.io);
         }
 
-        pub fn search(self: *Self, max_time_ms: i64) ArrayList(Game.Move) {
+        pub fn search(self: *Self, max_moves: usize, max_places: usize, max_time_ms: i64) ArrayList(Game.Move) {
             self.root.deinit(self.allocator);
             self.root = .init(.{ .move = .{}, .score = .{ .value = 0 } });
             const start = self.timestamp();
@@ -36,7 +37,7 @@ pub fn Mcts(comptime Game: type, comptime C: f64) type {
 
             var g = self.game.clone();
             while (self.timestamp().nanoseconds < deadline) {
-                self.root.expand(&g, self.allocator);
+                self.root.expand(&g, max_moves, max_places, self.allocator);
                 if (self.root.ms.score.isDecisive()) {
                     return self.pv();
                 }
@@ -96,25 +97,26 @@ fn MctsNode(comptime Game: type, comptime C: f64) type {
             allocator.free(self.children);
         }
 
-        fn expand(self: *Self, game: *Game, allocator: Allocator) void {
+        fn expand(self: *Self, game: *Game, max_moves: usize, max_places: usize, allocator: Allocator) void {
             if (self.children.len > 0) {
                 var child = self.select_child();
                 game.playMove(child.ms.move);
-                child.expand(game, allocator);
+                child.expand(game, max_moves, max_places, allocator);
             } else {
-                const moves = game.topMoves();
+                var move_list: [Game.max_moves]MS = undefined;
+                const moves = game.topMoves(max_places, move_list[0..max_moves]);
                 self.children = allocator.alloc(Self, moves.len) catch unreachable;
                 for (self.children, moves) |*child, move| {
-                    child.init(move);
+                    child.* = .init(move);
                 }
             }
-            var best_score = .loss;
+            var best_score: Score = .loss;
             for (self.children) |child| {
                 if (best_score.lt(child.ms.score)) {
                     best_score = child.ms.score;
                 }
             }
-            self.score = best_score.neg();
+            self.ms.score = best_score.neg();
             self.n_sims += 1;
         }
 
@@ -156,8 +158,11 @@ const DummyMove = struct {
 
 const DummyGame = struct {
     const Move = DummyMove;
+    const max_moves = 64;
 
-    pub fn topMoves(_: DummyGame, _: usize, _: *std.ArrayList(MoveScore(Move))) void {}
+    pub fn topMoves(_: DummyGame, _: usize, ms: []MoveScore(DummyMove)) []MoveScore(DummyMove) {
+        return ms;
+    }
 
     pub fn playMove(_: *DummyGame, _: Move) void {}
 
@@ -170,6 +175,6 @@ test {
     var game = DummyGame{};
     var tree = Mcts(DummyGame, 1).init(&game, std.testing.allocator, std.testing.io);
     defer tree.deinit();
-    const pv = tree.search(1);
+    const pv = tree.search(26, 20, 1);
     _ = pv;
 }

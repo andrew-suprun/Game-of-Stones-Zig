@@ -15,6 +15,8 @@ const Place = b.Place;
 const PlaceValue = b.PlaceValue;
 const heapAdd = @import("heap").heapAdd;
 
+pub const max_moves = 32;
+
 board: Board = Board{},
 turn: Player = .first,
 
