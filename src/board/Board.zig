@@ -121,7 +121,7 @@ pub fn placeStone(self: *Board, place: Place, turn: Player) void {
     }
 
     {
-        const x_start = if (x + 1 > win_stones) x + 1 else 0;
+        const x_start = if (x + 1 > win_stones) x + 1 - win_stones else 0;
         const x_end = @min(x + win_stones, board_size) + 1 - win_stones;
         const n = x_end - x_start;
         self.updateRow(y * board_size + x_start, 1, n, turn);
@@ -451,7 +451,7 @@ test topPlaces {
     var board = Board{};
     board.placeStone(try Place.init("j10"), .first);
     board.placeStone(try Place.init("i10"), .second);
-    board.placeStone(try Place.init("j9"), .second);
+    board.placeStone(try Place.init("i9"), .second);
     var places: [max_places]PlaceValue = undefined;
     const top_places = board.topPlaces(.first, places[0..20]);
     for (top_places) |place| {
@@ -459,15 +459,53 @@ test topPlaces {
     }
     const top_places2 = board.topPlaces(.second, places[0..20]);
     for (top_places2) |place| {
-        try std.testing.expect(place.value >= 35);
+        try std.testing.expect(place.value >= 36);
     }
 }
 
-test {
-    var board = Board{};
-    board.updateRow(0, 1, 6, .first);
-}
+// test "placeStone" {
+//     var rng = std.Random.DefaultPrng.init(2);
+//     var board = Board{};
 
+//     var value: Value = 0;
+//     for (1..board_size * board_size) |_| {
+//         var failure = false;
+//         for (0..board_size * board_size) |offset| {
+//             if (board.places[offset] == .none) {
+//                 const place = Place{ .offset = offset };
+//                 const actual = board.values[offset];
+//                 var b = board.clone();
+//                 b.placeStone(place, .first);
+//                 var expected = b.boardValue() - value;
+//                 if (actual[0] != expected) {
+//                     std.debug.print("Black: {f} actual={d} expected={d}\n", .{ place, actual[0], expected });
+//                     failure = true;
+//                 }
+//                 b = board.clone();
+//                 b.placeStone(place, .second);
+//                 expected = value - b.boardValue();
+//                 if (actual[1] != expected) {
+//                     std.debug.print("White: {f} actual={d} expected={d}\n", .{ place, actual[1], expected });
+//                     failure = true;
+//                 }
+//             }
+//         }
+//         if (failure) {
+//             std.debug.print("{f}\n", .{board});
+//             try std.testing.expect(false);
+//         }
+//         const offset: usize = rng.next() % board_size * board_size;
+//         if (board.places[offset] == .none) {
+//             const turn: u1 = @truncate(rng.next());
+//             if (turn == 0) {
+//                 value += board.values[offset][0];
+//             } else {
+//                 value -= board.values[offset][1];
+//             }
+//             board.placeStone(Place{ .offset = offset }, @enumFromInt(turn));
+//         }
+//     }
+// }
 // test {
 //     for (0..2) |i| {
 //         for (0..2) |j| {

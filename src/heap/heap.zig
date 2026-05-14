@@ -23,19 +23,19 @@ fn siftUp(comptime T: type, heap: *std.ArrayList(T), comptime less: fn (T, T) bo
     heap.items[child_idx] = child;
 }
 
-fn siftDown(comptime T: type, heap: *std.ArrayList(T), comptime less: fn (T, T) bool) void {
+fn siftDown(comptime T: type, heap: *std.ArrayList(T), comptime lt: fn (T, T) bool) void {
     var idx: usize = 0;
     const elem = heap.items[idx];
     while (true) {
         var first = idx;
         const left_child_idx = idx * 2 + 1;
-        if (left_child_idx < heap.items.len and less(heap.items[left_child_idx], elem)) {
+        if (left_child_idx < heap.items.len and lt(heap.items[left_child_idx], elem)) {
             first = left_child_idx;
         }
         const right_child_idx = idx * 2 + 2;
         if (right_child_idx < heap.items.len and
-            less(heap.items[right_child_idx], elem) and
-            less(heap.items[right_child_idx], heap.items[left_child_idx]))
+            lt(heap.items[right_child_idx], elem) and
+            lt(heap.items[right_child_idx], heap.items[left_child_idx]))
         {
             first = right_child_idx;
         }
@@ -64,7 +64,7 @@ test heapAdd {
     for (1..20) |i| {
         const parent = items[(i - 1) / 2];
         const child = items[i];
-        std.debug.print("t: i: {} p: {}, c: {}\n", .{ i, parent, child });
+        // std.debug.print("t: i: {} p: {}, c: {}\n", .{ i, parent, child });
         try std.testing.expect(parent < child);
     }
 }
