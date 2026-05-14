@@ -1,4 +1,5 @@
-const Writer = @import("std").Io.Writer;
+const std = @import("std");
+const Writer = std.Io.Writer;
 
 const options = @import("options");
 pub const game = options.game;
@@ -7,55 +8,59 @@ pub const board_size = options.board_size;
 
 pub const Player = enum { first, second };
 
-pub const Value = i16;
+pub const Value = f32;
 
 pub const Score = union(enum) {
     value: Value,
-    win,
-    loss,
-    draw,
 
-    pub fn isDecisive(self: Score) bool {
-        return switch (self) {
-            .win, .loss, .draw => true,
-            .value => false,
-        };
+    pub fn win() Score {
+        return Score(.{ .value = std.math.inf(Value) });
+    }
+
+    pub fn loss() Score {
+        return Score(.{ .value = -std.math.inf(Value) });
+    }
+
+    pub fn draw() Score {
+        return Score(.{ .value = std.math.nan(Value) });
+    }
+
+    pub fn isWin(score: Score) bool {
+        return std.math.isPositiveInf(score.value);
+    }
+
+    pub fn isLoss(score: Score) bool {
+        return std.math.isNegativeInf(score.value);
+    }
+
+    pub fn isDraw(score: Score) bool {
+        return std.math.isNan(score.value);
+    }
+
+    pub fn isDecisive(score: Score) bool {
+        return std.math.isInf(score.value) or score.isDraw();
     }
 
     pub fn lt(self: Score, other: Score) bool {
-        return switch (self) {
-            .win => false,
-            .loss => true,
-            .draw => switch (other) {
-                .win => true,
-                .loss, .draw => false,
-                .value => |vy| vy > 0,
-            },
-            .value => |vx| switch (other) {
-                .win => true,
-                .loss => false,
-                .draw => vx < 0,
-                .value => |vy| vx < vy,
-            },
-        };
+        const self_value = if (self.isDraw()) 0 else self.value;
+        const other_value = if (other.isDraw()) 0 else other.value;
+        return self_value < other_value;
     }
 
     pub fn neg(self: Score) Score {
-        return switch (self) {
-            .win => .loss,
-            .loss => .win,
-            .draw => .draw,
-            .value => |v| .{ .value = -v },
-        };
+        return Score{ .value = -self.value };
     }
 
     pub fn format(self: Score, w: *Writer) Writer.Error!void {
-        try switch (self) {
-            .value => |v| w.print("{d}", .{v}),
-            .win => w.print("win", .{}),
-            .loss => w.print("loss", .{}),
-            .draw => w.print("draw", .{}),
-        };
+        if (self.isWin()) {
+            w.print("win", .{});
+        } else if (self.isLoss()) {
+            w.print("loss", .{});
+        } else if (self.isDraw()) {
+            w.print("draw", .{});
+        } else {
+            w.print("{d}", .{self.value});
+        }
     }
 };
 
