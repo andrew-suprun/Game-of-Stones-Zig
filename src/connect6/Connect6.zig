@@ -1,4 +1,4 @@
-const Connect6 = @This();
+pub const Connect6 = @This();
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -21,8 +21,8 @@ board: Board = Board{},
 turn: Player = .first,
 
 pub const Move = struct {
-    place1: Place,
-    place2: Place,
+    place1: Place = .{},
+    place2: Place = .{},
 
     fn init(place1: Place, place2: Place) Move {
         if (place1.lt(place2)) {

@@ -21,7 +21,7 @@ pub const win = 5000;
 pub const inf = 8000;
 
 pub const Place = struct {
-    offset: usize,
+    offset: usize = 0,
 
     pub fn init(text: []const u8) error{ParseError}!Place {
         if (text.len < 2 or text.len > 3) return error.ParseError;
@@ -121,8 +121,8 @@ pub fn placeStone(self: *Board, place: Place, turn: Player) void {
     }
 
     {
-        const x_start = @max(0, x - win_stones + 1);
-        const x_end = @min(x + win_stones, board_size) - win_stones + 1;
+        const x_start = if (x + 1 > win_stones) x + 1 else 0;
+        const x_end = @min(x + win_stones, board_size) + 1 - win_stones;
         const n = x_end - x_start;
         self.updateRow(y * board_size + x_start, 1, n, turn);
     }
@@ -137,8 +137,8 @@ pub fn placeStone(self: *Board, place: Place, turn: Player) void {
     const m = 1 + @min(x, y, board_size - 1 - x, board_size - 1 - y);
 
     {
-        const upper_bound = board_size - win_stones + 1;
-        const n = @min(win_stones, m, upper_bound - y + x, upper_bound - x + y);
+        const upper_bound = board_size + 1 - win_stones;
+        const n = @min(win_stones, m, upper_bound + x - y, upper_bound + y - x);
         if (n > 0) {
             const mn = @min(x, y, win_stones - 1);
             const x_start = x - mn;
@@ -148,7 +148,7 @@ pub fn placeStone(self: *Board, place: Place, turn: Player) void {
     }
 
     {
-        const n = @min(win_stones, m, 2 * board_size - win_stones - y - x, x + y - win_stones + 2);
+        const n = @min(win_stones, m, 2 * board_size - win_stones - y - x, x + y + 2 - win_stones);
         if (n > 0) {
             const mn = @min(board_size - 1 - x, y, win_stones - 1);
             const x_start = x + mn;

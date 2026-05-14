@@ -74,7 +74,6 @@ pub fn build(b: *std.Build) void {
     const run_sim_step = b.step("run-sim", "Run the simulation");
     const run_sim_cmd = b.addRunArtifact(exe_sim);
     run_sim_step.dependOn(&run_sim_cmd.step);
-
     // Test: board
     const board_tests = b.addTest(.{
         .root_module = board,
@@ -99,6 +98,24 @@ pub fn build(b: *std.Build) void {
     const test_mcts_step = b.step("test-mcts", "Run Connect6 tests");
     test_mcts_step.dependOn(&run_mcts_tests.step);
 
+    // Tests:
+    const tests = b.addModule("tests", .{
+        .root_source_file = b.path("tests/tests.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    tests.addImport("base", base);
+    tests.addImport("connect6", connect6);
+    tests.addImport("mcts", mcts);
+
+    const integration_tests = b.addTest(.{
+        .root_module = tests,
+    });
+
+    const run_integration_tests = b.addRunArtifact(integration_tests);
+    const integration_tests_step = b.step("tests", "Run Integration tests");
+    integration_tests_step.dependOn(&run_integration_tests.step);
+
     // Benchmarks:
     const benchmarks = b.addModule("benchmarks", .{
         .root_source_file = b.path("apps/benchmarks/benchmarks.zig"),
@@ -114,7 +131,7 @@ pub fn build(b: *std.Build) void {
         .root_module = benchmarks,
     });
     b.installArtifact(benchmarks_exe);
-    const bench_board_cmd_step = b.step("benchmarks", "Run benchmarks");
-    const bench_board_cmd = b.addRunArtifact(benchmarks_exe);
-    bench_board_cmd_step.dependOn(&bench_board_cmd.step);
+    const benchmark_cmd_step = b.step("benchmarks", "Run benchmarks");
+    const benchmark_cmd = b.addRunArtifact(benchmarks_exe);
+    benchmark_cmd_step.dependOn(&benchmark_cmd.step);
 }
