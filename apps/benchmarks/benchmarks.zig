@@ -4,6 +4,7 @@ const print = std.debug.print;
 
 const heap = @import("heap_bench.zig");
 const board = @import("board_bench.zig");
+const mcts = @import("mcts_bench.zig");
 
 pub const Benchmark = struct {
     io: std.Io,
@@ -40,6 +41,11 @@ pub const Benchmark = struct {
 };
 
 pub fn main(init: std.process.Init) void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+
+    const allocator = arena.allocator();
+
     const io = init.io;
     print("--- heap ---\n", .{});
     heap.benchHeapAdd(io);
@@ -50,4 +56,6 @@ pub fn main(init: std.process.Init) void {
     board.benchRollout(io);
     board.benchTopPlaces(io);
     board.benchMaxValue(io);
+    print("\n--- Mcts ---\n", .{});
+    mcts.benchMctsExpand(allocator, io);
 }

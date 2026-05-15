@@ -8,9 +8,9 @@ fn testLt(i: usize, j: usize) bool {
 }
 
 pub fn benchHeapAdd(io: std.Io) void {
+    var bm = Benchmark.init(io);
     var buf: [20]usize = undefined;
     var heap = std.ArrayList(usize).initBuffer(&buf);
-    var bm = Benchmark.init(io);
     bm.start();
     for (0..10_000_000) |_| {
         heap.clearRetainingCapacity();

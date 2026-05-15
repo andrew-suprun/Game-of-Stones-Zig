@@ -125,6 +125,8 @@ pub fn build(b: *std.Build) void {
     benchmarks.addImport("base", base);
     benchmarks.addImport("heap", heap);
     benchmarks.addImport("board", board);
+    benchmarks.addImport("connect6", connect6);
+    benchmarks.addImport("mcts", mcts);
 
     const benchmarks_exe = b.addExecutable(.{
         .name = "benchmarks",
