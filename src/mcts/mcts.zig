@@ -35,8 +35,8 @@ pub fn Mcts(comptime Game: type, comptime C: f64) type {
             const start = self.timestamp();
             const deadline = start.addDuration(.fromMilliseconds(max_time_ms)).nanoseconds;
 
-            var g = self.game.clone();
             while (self.timestamp().nanoseconds < deadline) {
+                var g = self.game.clone();
                 self.root.expand(&g, max_moves, max_places, self.allocator);
                 if (self.root.ms.score.isDecisive()) {
                     return self.calcPv(pv);
@@ -60,9 +60,9 @@ pub fn Mcts(comptime Game: type, comptime C: f64) type {
             var node = self.root;
             while (idx < buf.len) {
                 buf[idx] = node.ms.move;
+                idx += 1;
                 if (node.children.len == 0) break;
                 node = node.bestChild();
-                idx += 1;
             }
 
             return buf[0..idx];

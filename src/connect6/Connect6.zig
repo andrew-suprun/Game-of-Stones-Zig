@@ -33,7 +33,7 @@ pub const Move = struct {
         }
     }
 
-    fn initFromStr(text: []const u8) error{ParseError}!Move {
+    pub fn initFromStr(text: []const u8) error{ParseError}!Move {
         var it = std.mem.tokenizeScalar(u8, text, '-');
         const token1 = it.next() orelse return error.ParseError;
         const token2 = it.next() orelse token1;
