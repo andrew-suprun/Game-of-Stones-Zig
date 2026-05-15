@@ -121,7 +121,7 @@ fn MctsNode(comptime Game: type, comptime C: f64) type {
                     child.* = .init(move);
                 }
             }
-            var best_score: Score = .loss;
+            var best_score: Score = .loss();
             for (self.children) |child| {
                 if (best_score.lt(child.ms.score)) {
                     best_score = child.ms.score;
@@ -136,17 +136,16 @@ fn MctsNode(comptime Game: type, comptime C: f64) type {
             var max_value = -std.math.inf(f64);
             const node_sims: f64 = @floatFromInt(self.n_sims);
             for (self.children) |*child| {
-                switch (child.ms.score) {
-                    .win, .loss, .draw => continue,
-                    .value => |v| {
-                        const value: f64 = @floatFromInt(v);
-                        const child_sims: f64 = @floatFromInt(child.n_sims);
-                        const child_value: f64 = value + C * node_sims / child_sims;
-                        if (max_value < child_value) {
-                            max_value = child_value;
-                            selected_child = child;
-                        }
-                    },
+                if (child.ms.score.isDecisive()) {
+                    continue;
+                } else {
+                    const value: f64 = @floatCast(child.ms.score.value);
+                    const child_sims: f64 = @floatFromInt(child.n_sims);
+                    const child_value: f64 = value + C * node_sims / child_sims;
+                    if (max_value < child_value) {
+                        max_value = child_value;
+                        selected_child = child;
+                    }
                 }
             }
             if (selected_child) |child| {
@@ -197,5 +196,4 @@ test {
     defer tree.deinit();
     var pv_buf: [100]DummyGame.Move = undefined;
     _ = tree.search(26, 20, 1, &pv_buf);
-    std.debug.print("tree: {f}\n", .{tree});
 }

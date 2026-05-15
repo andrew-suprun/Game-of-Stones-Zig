@@ -14,15 +14,15 @@ pub const Score = union(enum) {
     value: Value,
 
     pub fn win() Score {
-        return Score(.{ .value = std.math.inf(Value) });
+        return .{ .value = std.math.inf(Value) };
     }
 
     pub fn loss() Score {
-        return Score(.{ .value = -std.math.inf(Value) });
+        return .{ .value = -std.math.inf(Value) };
     }
 
     pub fn draw() Score {
-        return Score(.{ .value = std.math.nan(Value) });
+        return .{ .value = std.math.nan(Value) };
     }
 
     pub fn isWin(score: Score) bool {
@@ -53,13 +53,13 @@ pub const Score = union(enum) {
 
     pub fn format(self: Score, w: *Writer) Writer.Error!void {
         if (self.isWin()) {
-            w.print("win", .{});
+            try w.print("win", .{});
         } else if (self.isLoss()) {
-            w.print("loss", .{});
+            try w.print("loss", .{});
         } else if (self.isDraw()) {
-            w.print("draw", .{});
+            try w.print("draw", .{});
         } else {
-            w.print("{d}", .{self.value});
+            try w.print("{d}", .{self.value});
         }
     }
 };

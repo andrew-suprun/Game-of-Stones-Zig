@@ -7,6 +7,7 @@ const base = @import("base");
 const game = base.game;
 const board_size = base.board_size;
 const Player = base.Player;
+const Score = base.Score;
 const Value = base.Value;
 const MoveScore = base.MoveScore(Move);
 const b = @import("board");
@@ -76,8 +77,8 @@ pub fn topMoves(self: Connect6, max_places: usize, moves: []MoveScore) []MoveSco
         const pv = top_places[i];
         const place1 = pv.place;
         const value1 = pv.value;
-        if (value1 >= Board.win) {
-            moves[0] = .{ .move = .init(place1, place1), .score = .win };
+        if (value1 == std.math.inf(Value)) {
+            moves[0] = .{ .move = .init(place1, place1), .score = .win() };
             return moves[0..1];
         }
 
@@ -88,17 +89,17 @@ pub fn topMoves(self: Connect6, max_places: usize, moves: []MoveScore) []MoveSco
             const place2 = top_places[j].place;
             const value2 = board1.values[@intFromEnum(self.turn)][place2.offset];
 
-            if (value2 >= Board.win) {
-                moves[0] = .{ .move = .init(place1, place2), .score = .win };
+            if (value2 == std.math.inf(Value)) {
+                moves[0] = .{ .move = .init(place1, place2), .score = .win() };
                 return moves[0..1];
             } else if (value1 + value2 == 0) {
-                const ms = MoveScore{ .move = .init(place1, place2), .score = .draw };
+                const ms = MoveScore{ .move = .init(place1, place2), .score = .draw() };
                 heapAdd(ms, &move_list, lt);
             } else {
                 var board2 = board1.clone();
                 board2.placeStone(place2, self.turn);
                 const opp_value = board2.maxValue(opponent(self.turn));
-                if (opp_value < Board.inf) {
+                if (std.math.isFinite(opp_value)) {
                     const move_value = self.board.value + value1 + value2 - opp_value;
                     const ms = MoveScore{ .move = .init(place1, place2), .score = .{ .value = move_value } };
                     heapAdd(ms, &move_list, lt);
@@ -107,7 +108,7 @@ pub fn topMoves(self: Connect6, max_places: usize, moves: []MoveScore) []MoveSco
         }
     }
     if (moves.len == 0) {
-        moves[0] = .{ .move = .init(top_places[0].place, top_places[1].place), .score = .loss };
+        moves[0] = .{ .move = .init(top_places[0].place, top_places[1].place), .score = .loss() };
         return moves[0..1];
     }
     return move_list.items;
