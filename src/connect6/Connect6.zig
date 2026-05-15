@@ -72,7 +72,8 @@ pub fn topMoves(self: Connect6, max_places: usize, moves: []MoveScore) []MoveSco
 
     std.debug.assert(top_places.len >= 2);
 
-    var move_list = std.ArrayList(MoveScore).initBuffer(moves[0..max_places]);
+    const board_value = if (self.turn == .first) self.board.value else -self.board.value;
+    var move_list = std.ArrayList(MoveScore).initBuffer(moves);
     for (0..top_places.len - 1) |i| {
         const pv = top_places[i];
         const place1 = pv.place;
@@ -100,7 +101,7 @@ pub fn topMoves(self: Connect6, max_places: usize, moves: []MoveScore) []MoveSco
                 board2.placeStone(place2, self.turn);
                 const opp_value = board2.maxValue(opponent(self.turn));
                 if (std.math.isFinite(opp_value)) {
-                    const move_value = self.board.value + value1 + value2 - opp_value;
+                    const move_value = board_value + value1 + value2 - opp_value;
                     const ms = MoveScore{ .move = .init(place1, place2), .score = .{ .value = move_value } };
                     heapAdd(ms, &move_list, lt);
                 }

@@ -9,14 +9,18 @@ test {
     var game = Connect6{};
     game.playMove(try .initFromStr("j10"));
     game.playMove(try .initFromStr("i9-i10"));
-    std.debug.print("{f}\n", .{game});
     var tree = Mcts(Connect6, 0.35).init(&game, std.testing.allocator, std.testing.io);
     defer tree.deinit();
 
-    var pv_buf: [100]Connect6.Move = undefined;
-    const pv = tree.search(26, 20, 250, &pv_buf);
+    for (1..21) |i| {
+        print("==== expand {d}\n", .{i});
+        var g = game.clone();
+        tree.root.expand(&g, 26, 20, std.testing.allocator);
+        var pv_buf: [100]Connect6.Move = undefined;
+        const pv = tree.calcPv(&pv_buf);
 
-    std.debug.print("pv:", .{});
-    for (pv) |move| std.debug.print(" {f}", .{move});
-    std.debug.print("\ntree: {f}\n", .{tree});
+        print("pv:", .{});
+        for (pv) |move| print(" {f}", .{move});
+        print("\n{f}\n", .{tree});
+    }
 }

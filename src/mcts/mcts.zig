@@ -55,14 +55,12 @@ pub fn Mcts(comptime Game: type, comptime C: f64) type {
             return self.calcPv(pv);
         }
 
-        fn calcPv(self: Self, buf: []Game.Move) []Game.Move {
-            var idx: usize = 0;
+        pub fn calcPv(self: Self, buf: []Game.Move) []Game.Move {
             var node = self.root;
-            while (idx < buf.len) {
-                buf[idx] = node.ms.move;
-                idx += 1;
-                if (node.children.len == 0) break;
+            var idx: usize = 0;
+            while (node.children.len > 0 and idx < buf.len) : (idx += 1) {
                 node = node.bestChild();
+                buf[idx] = node.ms.move;
             }
 
             return buf[0..idx];
@@ -73,6 +71,7 @@ pub fn Mcts(comptime Game: type, comptime C: f64) type {
         }
 
         pub fn formatTree(self: Self, node: Node, depth: usize, w: *std.Io.Writer) std.Io.Writer.Error!void {
+            try w.print("{d}: ", .{depth});
             for (0..depth) |_| {
                 try w.print("|   ", .{});
             }
@@ -108,7 +107,7 @@ fn MctsNode(comptime Game: type, comptime C: f64) type {
             allocator.free(self.children);
         }
 
-        fn expand(self: *Self, game: *Game, max_moves: usize, max_places: usize, allocator: Allocator) void {
+        pub fn expand(self: *Self, game: *Game, max_moves: usize, max_places: usize, allocator: Allocator) void {
             if (self.children.len > 0) {
                 var child = self.selectChild();
                 game.playMove(child.ms.move);
@@ -166,7 +165,7 @@ fn MctsNode(comptime Game: type, comptime C: f64) type {
         }
 
         pub fn format(self: Self, w: *std.Io.Writer) std.Io.Writer.Error!void {
-            try w.print("{f} sims: {d}", .{ self.ms, self.n_sims });
+            try w.print("{f}.0 sims: {d}", .{ self.ms, self.n_sims });
         }
     };
 }
